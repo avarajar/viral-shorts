@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  n8n:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - /home/ubuntu/pipeline:/pipeline
+    environment:
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - GENERIC_TIMEZONE=America/Bogota
+      - N8N_METRICS=true
+      - N8N_SECURE_COOKIE=true
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      - N8N_HOST=joselito.mywire.org
+      - WEBHOOK_URL=https://joselito.mywire.org/

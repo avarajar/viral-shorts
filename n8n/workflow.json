@@ -1,0 +1,275 @@
+{
+  "id": "wq9yl8NZrLnzwlYU",
+  "name": "Viral Video Pipeline",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            },
+            {
+              "triggerAtHour": 16
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "command": "cd /pipeline/scripts && GROQ_API_KEY=$GROQ_API_KEY PEXELS_API_KEY=$PEXELS_API_KEY HF_TOKEN=$HF_TOKEN POLLINATIONS_API_KEY=$POLLINATIONS_API_KEY python3 story_pipeline.py 2>/pipeline/pipeline.log"
+      },
+      "id": "run-pipeline",
+      "name": "Run Pipeline",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse pipeline output\nconst output = JSON.parse($input.first().json.stdout);\n\nif (!output.success) {\n  throw new Error(`Pipeline failed: ${output.error}`);\n}\n\nreturn [{\n  json: {\n    success: output.success,\n    compilation: output.compilation,\n    shorts_count: output.shorts_count,\n    shorts: output.shorts || [],\n    video_title: output.video_title || 'Daily Viral Compilation',\n    video_description: output.video_description || 'The most viral videos from today.',\n    tags: output.tags || ['viral', 'compilation', 'funny'],\n    elapsed_seconds: output.elapsed_seconds,\n    clips_used: output.clips_used\n  }\n}];"
+      },
+      "id": "parse-output",
+      "name": "Parse Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "filePath": "={{ $json.compilation }}"
+      },
+      "id": "read-video",
+      "name": "Read Video File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $('Parse Output').first().json.video_title }}",
+        "description": "={{ $('Parse Output').first().json.video_description }}\n\n#shorts #storytime #reddit #aita #revenge #plottwist #drama #viral #redditstories #redditstorytime",
+        "options": {
+          "privacyStatus": "public",
+          "tags": "={{ $('Parse Output').first().json.tags.join(',') }},shorts,storytime,reddit,aita,revenge,plottwist,drama,viral,redditstories",
+          "categoryId": "22"
+        }
+      },
+      "id": "youtube-upload",
+      "name": "YouTube Upload",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [880, 0],
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "Kx7bvYwIYb5edFfz",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract video ID from YouTube Upload response\nconst ytData = $('YouTube Upload').first().json;\n\n// Try multiple paths for video ID\nlet videoId = '';\nif (ytData.id) videoId = ytData.id;\nelse if (ytData.videoId) videoId = ytData.videoId;\nelse if (ytData.snippet && ytData.snippet.resourceId) videoId = ytData.snippet.resourceId.videoId || '';\n\n// If still empty, search top-level keys for an 11-char YouTube ID pattern\nif (!videoId) {\n  for (const [k, v] of Object.entries(ytData)) {\n    if (typeof v === 'string' && v.length >= 8 && v.length <= 12 && /^[a-zA-Z0-9_-]+$/.test(v)) {\n      videoId = v;\n      break;\n    }\n  }\n}\n\nconst videoUrl = videoId ? `https://youtube.com/watch?v=${videoId}` : 'https://www.youtube.com/channel/UCMvzfQUpxbx9SvztFdGJixg';\n\nreturn [{\n  json: {\n    videoId,\n    videoUrl,\n    ytResponseKeys: Object.keys(ytData).join(', '),\n    video_title: $('Parse Output').first().json.video_title,\n    video_description: $('Parse Output').first().json.video_description,\n    clips_used: $('Parse Output').first().json.clips_used,\n    shorts_count: $('Parse Output').first().json.shorts_count,\n    elapsed_seconds: $('Parse Output').first().json.elapsed_seconds\n  }\n}];"
+      },
+      "id": "extract-video-id",
+      "name": "Extract Video ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [990, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=Video subido a YouTube!\n\nTitulo: {{ $json.video_title }}\nURL: {{ $json.videoUrl }}\nShorts: {{ $json.shorts_count }}\nTiempo: {{ $json.elapsed_seconds }}s\nYT Keys: {{ $json.ytResponseKeys }}"
+            }
+          ]
+        }
+      },
+      "id": "discord-success",
+      "name": "Discord: Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1210, 0]
+    },
+    {
+      "parameters": {
+        "command": "bash /pipeline/scripts/cleanup.sh"
+      },
+      "id": "cleanup",
+      "name": "Cleanup Files",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [440, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=Pipeline FALLO\n\nNodo: {{ $json.execution.error.node.name || 'Desconocido' }}\nError: {{ $json.execution.error.message || 'Error desconocido' }}\n\nRevisa logs en el servidor:\ndocker exec n8n cat /pipeline/pipeline.log"
+            }
+          ]
+        }
+      },
+      "id": "discord-error",
+      "name": "Discord: Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 250]
+    },
+    {
+      "parameters": {
+        "command": "bash /pipeline/scripts/cleanup.sh"
+      },
+      "id": "cleanup-on-error",
+      "name": "Cleanup on Error",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [880, 250]
+    },
+    {
+      "parameters": {
+        "content": "### Viral Video Pipeline\n\nRuns twice daily (7 AM & 4 PM):\n\n1. Generate story (Groq AI)\n2. Narrate (edge-tts)\n3. Generate visuals (FLUX AI + Pexels)\n4. Compile video (FFmpeg)\n5. Upload to YouTube\n6. Notify Discord\n7. Cleanup temp files\n\n**Error handling:**\nAny error triggers Discord notification.\n\n**Manual run:** Click Execute Workflow\n\n**Env vars:**\n- GROQ_API_KEY\n- HF_TOKEN\n- PEXELS_API_KEY\n- DISCORD_WEBHOOK_URL",
+        "height": 380,
+        "width": 300
+      },
+      "id": "sticky-note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-340, -80]
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "Run Pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Pipeline": {
+      "main": [
+        [
+          {
+            "node": "Parse Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Output": {
+      "main": [
+        [
+          {
+            "node": "Read Video File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Video File": {
+      "main": [
+        [
+          {
+            "node": "YouTube Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Upload": {
+      "main": [
+        [
+          {
+            "node": "Extract Video ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Video ID": {
+      "main": [
+        [
+          {
+            "node": "Discord: Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord: Success": {
+      "main": [
+        [
+          {
+            "node": "Cleanup Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Discord: Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord: Error": {
+      "main": [
+        [
+          {
+            "node": "Cleanup on Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "wq9yl8NZrLnzwlYU"
+  }
+}
