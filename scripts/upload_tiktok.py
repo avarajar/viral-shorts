@@ -18,7 +18,7 @@ import threading
 # ─── Configuration ──────────────────────────────────────────────────
 CLIENT_KEY = os.environ.get("TIKTOK_CLIENT_KEY", "")
 CLIENT_SECRET = os.environ.get("TIKTOK_CLIENT_SECRET", "")
-REDIRECT_URI = "https://kanjeo.com/callback"
+REDIRECT_URI = os.environ.get("TIKTOK_REDIRECT_URI", "https://avarajar.github.io/viral-shorts/")
 
 BASE_URL = "https://open.tiktokapis.com"
 AUTH_URL = "https://www.tiktok.com/v2/auth/authorize/"
@@ -136,23 +136,24 @@ def run_auth_flow():
     print("\n" + "=" * 60, file=sys.stderr)
     print("  TIKTOK AUTHORIZATION", file=sys.stderr)
     print("=" * 60, file=sys.stderr)
-    print(f"\n  Abre este link en tu browser:\n", file=sys.stderr)
+    print(f"\n  Open this link in your browser:\n", file=sys.stderr)
     print(f"  {auth_url}\n", file=sys.stderr)
-    print("  Esperando autorizacion en localhost:8080...", file=sys.stderr)
+    print("  After authorizing, you will be redirected.", file=sys.stderr)
+    print("  Copy the FULL URL from your browser's address bar", file=sys.stderr)
+    print("  and paste it below.\n", file=sys.stderr)
 
-    server = HTTPServer(("0.0.0.0", 8080), CallbackHandler)
-    server.timeout = 300  # 5 min timeout
-    server.handle_request()
-    server.server_close()
+    redirected_url = input("  Paste redirected URL here: ").strip()
 
-    code = CallbackHandler.auth_code
+    params = urllib.parse.parse_qs(urllib.parse.urlparse(redirected_url).query)
+    code = params.get("code", [None])[0]
+
     if not code:
-        print("  [ERR] No se recibio codigo de autorizacion", file=sys.stderr)
+        print("  [ERR] No authorization code found in URL", file=sys.stderr)
         sys.exit(1)
 
-    print("  [OK] Codigo recibido, intercambiando por tokens...", file=sys.stderr)
+    print("  [OK] Code received, exchanging for tokens...", file=sys.stderr)
     tokens = exchange_code(code)
-    print("  [OK] Tokens guardados!", file=sys.stderr)
+    print("  [OK] Tokens saved!", file=sys.stderr)
     return tokens
 
 
@@ -265,12 +266,16 @@ def upload_short(video_path, title, tags=None):
     creator = query_creator(access_token)
     available = creator.get("privacy_level_options", ["SELF_ONLY"])
 
-    # Use best available privacy
-    privacy = "SELF_ONLY"
-    for pref in ["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY"]:
-        if pref in available:
-            privacy = pref
-            break
+    # Use best available privacy (sandbox only allows SELF_ONLY)
+    is_sandbox = CLIENT_KEY.startswith("sb")
+    if is_sandbox:
+        privacy = "SELF_ONLY"
+    else:
+        privacy = "SELF_ONLY"
+        for pref in ["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY"]:
+            if pref in available:
+                privacy = pref
+                break
 
     # Build description with hashtags
     tag_str = ""
