@@ -1,0 +1,71 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'config/**'
+      - 'n8n/**'
+      - 'setup.sh'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 149.130.186.177 >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Detect changed files
+        id: changes
+        run: |
+          echo "scripts=$(git diff --name-only HEAD~1 HEAD -- 'scripts/' | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
+          echo "config=$(git diff --name-only HEAD~1 HEAD -- 'config/' | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
+          echo "n8n_docker=$(git diff --name-only HEAD~1 HEAD -- 'n8n/Dockerfile' 'n8n/docker-compose.override.yml' | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
+          echo "n8n_workflow=$(git diff --name-only HEAD~1 HEAD -- 'n8n/workflow.json' | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
+          echo "setup=$(git diff --name-only HEAD~1 HEAD -- 'setup.sh' | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
+
+      - name: Deploy scripts
+        if: steps.changes.outputs.scripts != '0'
+        run: |
+          scp -i ~/.ssh/deploy_key scripts/*.py scripts/*.sh ubuntu@149.130.186.177:/home/ubuntu/pipeline/scripts/
+          echo "Scripts deployed!"
+
+      - name: Deploy nginx config
+        if: steps.changes.outputs.config != '0'
+        run: |
+          scp -i ~/.ssh/deploy_key config/nginx-shorts.conf ubuntu@149.130.186.177:/tmp/nginx-shorts.conf
+          ssh -i ~/.ssh/deploy_key ubuntu@149.130.186.177 "sudo cp /tmp/nginx-shorts.conf /etc/nginx/sites-enabled/shorts.conf && sudo nginx -t && sudo systemctl reload nginx"
+          echo "Nginx config deployed!"
+
+      - name: Rebuild n8n container
+        if: steps.changes.outputs.n8n_docker != '0'
+        run: |
+          scp -i ~/.ssh/deploy_key n8n/Dockerfile n8n/docker-compose.override.yml ubuntu@149.130.186.177:/home/ubuntu/pipeline/n8n/
+          ssh -i ~/.ssh/deploy_key ubuntu@149.130.186.177 "cd /home/ubuntu/pipeline/n8n && docker compose up -d --build"
+          echo "n8n container rebuilt!"
+
+      - name: Import n8n workflow
+        if: steps.changes.outputs.n8n_workflow != '0' && steps.changes.outputs.n8n_docker == '0'
+        run: |
+          scp -i ~/.ssh/deploy_key n8n/workflow.json ubuntu@149.130.186.177:/home/ubuntu/pipeline/n8n/
+          ssh -i ~/.ssh/deploy_key ubuntu@149.130.186.177 "cd /home/ubuntu/pipeline/n8n && docker compose exec -T n8n n8n import:workflow --input=/pipeline/n8n/workflow.json && docker compose restart n8n"
+          echo "n8n workflow imported and restarted!"
+
+      - name: Deploy setup.sh
+        if: steps.changes.outputs.setup != '0'
+        run: |
+          scp -i ~/.ssh/deploy_key setup.sh ubuntu@149.130.186.177:/home/ubuntu/pipeline/setup.sh
+          echo "setup.sh deployed!"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
