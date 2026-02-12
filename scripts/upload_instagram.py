@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Instagram Reels Upload via Graph API.
-Uses official Instagram Content Publishing API.
+Instagram Reels Upload via Instagram Graph API.
+Uses Instagram Login (IGAA tokens) + Content Publishing API.
 
 Flow:
   1. Upload video via public URL -> create media container
@@ -10,7 +10,6 @@ Flow:
 
 Requires:
   - Instagram Professional account (Creator or Business)
-  - Connected Facebook Page
   - Facebook App with instagram_content_publish permission
   - Video accessible via public URL (served by nginx on this server)
 """
@@ -28,9 +27,10 @@ INSTAGRAM_APP_ID = os.environ.get("INSTAGRAM_APP_ID", "")
 INSTAGRAM_APP_SECRET = os.environ.get("INSTAGRAM_APP_SECRET", "")
 INSTAGRAM_ACCESS_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "")
 INSTAGRAM_USER_ID = os.environ.get("INSTAGRAM_USER_ID", "")
-INSTAGRAM_VIDEO_BASE_URL = os.environ.get("INSTAGRAM_VIDEO_BASE_URL", "http://149.130.186.177/shorts")
+INSTAGRAM_VIDEO_BASE_URL = os.environ.get("INSTAGRAM_VIDEO_BASE_URL", "https://joselito.mywire.org/shorts")
 
-GRAPH_API = "https://graph.facebook.com/v21.0"
+IG_GRAPH_API = "https://graph.instagram.com"
+IG_GRAPH_API_V = "https://graph.instagram.com/v21.0"
 
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "instagram_tokens.json")
 
@@ -98,12 +98,11 @@ def _api_post(url, params):
 # ─── OAuth Flow ──────────────────────────────────────────────────────
 
 def get_long_lived_token(short_token):
-    """Exchange a short-lived token for a long-lived one (60 days)."""
-    result = _api_get(f"{GRAPH_API}/oauth/access_token", {
-        "grant_type": "fb_exchange_token",
-        "client_id": INSTAGRAM_APP_ID,
+    """Exchange a short-lived Instagram token for a long-lived one (60 days)."""
+    result = _api_get(f"{IG_GRAPH_API}/access_token", {
+        "grant_type": "ig_exchange_token",
         "client_secret": INSTAGRAM_APP_SECRET,
-        "fb_exchange_token": short_token,
+        "access_token": short_token,
     })
     if "access_token" not in result:
         raise RuntimeError(f"Token exchange failed: {result}")
@@ -113,12 +112,10 @@ def get_long_lived_token(short_token):
 
 
 def refresh_long_lived_token(current_token):
-    """Refresh a long-lived token (must not be expired)."""
-    result = _api_get(f"{GRAPH_API}/oauth/access_token", {
-        "grant_type": "fb_exchange_token",
-        "client_id": INSTAGRAM_APP_ID,
-        "client_secret": INSTAGRAM_APP_SECRET,
-        "fb_exchange_token": current_token,
+    """Refresh a long-lived Instagram token (must not be expired)."""
+    result = _api_get(f"{IG_GRAPH_API}/refresh_access_token", {
+        "grant_type": "ig_refresh_token",
+        "access_token": current_token,
     })
     if "access_token" not in result:
         raise RuntimeError(f"Token refresh failed: {result}")
@@ -128,49 +125,35 @@ def refresh_long_lived_token(current_token):
 
 
 def get_instagram_user_id(access_token):
-    """Get the Instagram Business/Creator account ID linked to the FB page."""
-    # First get FB pages
-    pages = _api_get(f"{GRAPH_API}/me/accounts", {
+    """Get the Instagram user ID from the token."""
+    result = _api_get(f"{IG_GRAPH_API_V}/me", {
+        "fields": "user_id,username",
         "access_token": access_token,
     })
-    if not pages.get("data"):
-        raise RuntimeError("No Facebook Pages found. Link your IG to a FB Page first.")
+    user_id = result.get("user_id") or result.get("id")
+    username = result.get("username", "unknown")
 
-    page = pages["data"][0]
-    page_id = page["id"]
-    page_name = page.get("name", "Unknown")
-    print(f"  [auth] Found FB Page: {page_name} ({page_id})", file=sys.stderr)
+    if not user_id:
+        raise RuntimeError(f"Could not get user ID: {result}")
 
-    # Get connected IG account
-    ig_data = _api_get(f"{GRAPH_API}/{page_id}", {
-        "fields": "instagram_business_account",
-        "access_token": access_token,
-    })
-    ig_account = ig_data.get("instagram_business_account", {})
-    ig_user_id = ig_account.get("id")
-
-    if not ig_user_id:
-        raise RuntimeError("No Instagram Business account linked to this FB Page.")
-
-    print(f"  [auth] Instagram User ID: {ig_user_id}", file=sys.stderr)
-    return ig_user_id
+    print(f"  [auth] Instagram: @{username} (ID: {user_id})", file=sys.stderr)
+    return user_id
 
 
-def run_auth_flow():
-    """Interactive auth flow: user provides short-lived token from Graph Explorer."""
+def run_auth_flow(token_arg=None):
+    """Auth flow: exchange short-lived token for long-lived one."""
     print("\n" + "=" * 60, file=sys.stderr)
     print("  INSTAGRAM AUTHORIZATION", file=sys.stderr)
     print("=" * 60, file=sys.stderr)
-    print(f"\n  1. Go to: https://developers.facebook.com/tools/explorer/", file=sys.stderr)
-    print(f"  2. Select your app", file=sys.stderr)
-    print(f"  3. Select permissions:", file=sys.stderr)
-    print(f"     - instagram_basic", file=sys.stderr)
-    print(f"     - instagram_content_publish", file=sys.stderr)
-    print(f"     - pages_read_engagement", file=sys.stderr)
-    print(f"  4. Click 'Generate Access Token'", file=sys.stderr)
-    print(f"  5. Copy the token and paste it below\n", file=sys.stderr)
 
-    short_token = input("  Paste access token here: ").strip()
+    if token_arg:
+        short_token = token_arg
+    else:
+        print(f"\n  1. Go to your app's Instagram > API setup", file=sys.stderr)
+        print(f"  2. Generate a token for your IG account", file=sys.stderr)
+        print(f"  3. Copy the token and paste it below\n", file=sys.stderr)
+        short_token = input("  Paste access token here: ").strip()
+
     if not short_token:
         print("  [ERR] No token provided", file=sys.stderr)
         sys.exit(1)
@@ -192,7 +175,6 @@ def run_auth_flow():
     save_tokens(token_data)
     print(f"\n  [OK] Authorized! Token valid for ~60 days.", file=sys.stderr)
     print(f"  [OK] Instagram User ID: {user_id}", file=sys.stderr)
-    print(f"  [OK] Add to .env: INSTAGRAM_USER_ID={user_id}", file=sys.stderr)
     return token_data
 
 
@@ -206,7 +188,7 @@ def create_reel_container(user_id, access_token, video_url, caption):
         "caption": caption,
         "access_token": access_token,
     }
-    result = _api_post(f"{GRAPH_API}/{user_id}/media", params)
+    result = _api_post(f"{IG_GRAPH_API_V}/{user_id}/media", params)
 
     container_id = result.get("id")
     if not container_id:
@@ -218,7 +200,7 @@ def create_reel_container(user_id, access_token, video_url, caption):
 
 def check_container_status(container_id, access_token):
     """Check if the media container is ready for publishing."""
-    result = _api_get(f"{GRAPH_API}/{container_id}", {
+    result = _api_get(f"{IG_GRAPH_API_V}/{container_id}", {
         "fields": "status_code,status",
         "access_token": access_token,
     })
@@ -227,7 +209,7 @@ def check_container_status(container_id, access_token):
 
 def publish_container(user_id, access_token, container_id):
     """Step 2: Publish the media container."""
-    result = _api_post(f"{GRAPH_API}/{user_id}/media_publish", {
+    result = _api_post(f"{IG_GRAPH_API_V}/{user_id}/media_publish", {
         "creation_id": container_id,
         "access_token": access_token,
     })
@@ -359,10 +341,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if sys.argv[1] == "--auth":
-        if not INSTAGRAM_APP_ID or not INSTAGRAM_APP_SECRET:
-            print("Set INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET env vars", file=sys.stderr)
+        if not INSTAGRAM_APP_SECRET:
+            print("Set INSTAGRAM_APP_SECRET env var", file=sys.stderr)
             sys.exit(1)
-        run_auth_flow()
+        token_arg = sys.argv[2] if len(sys.argv) > 2 else None
+        run_auth_flow(token_arg)
     elif sys.argv[1] == "--refresh":
         tokens = load_tokens()
         if tokens:
