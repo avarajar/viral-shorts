@@ -205,14 +205,15 @@ def run_pipeline() -> dict:
             "tags": main_short["tags"],
         }
 
-        # Save manifest for TikTok upload (runs on host via cron)
-        manifest_path = os.path.join(OUTPUT_DIR, "tiktok_manifest.json")
-        try:
-            with open(manifest_path, "w") as mf:
-                json.dump(result, mf, indent=2)
-            print(f"  TikTok manifest saved: {manifest_path}", file=sys.stderr)
-        except Exception as e:
-            print(f"  [WARN] Could not save TikTok manifest: {e}", file=sys.stderr)
+        # Save manifests for platform uploads (run on host via cron)
+        for platform in ["tiktok", "instagram"]:
+            manifest_path = os.path.join(OUTPUT_DIR, f"{platform}_manifest.json")
+            try:
+                with open(manifest_path, "w") as mf:
+                    json.dump(result, mf, indent=2)
+                print(f"  {platform.capitalize()} manifest saved: {manifest_path}", file=sys.stderr)
+            except Exception as e:
+                print(f"  [WARN] Could not save {platform} manifest: {e}", file=sys.stderr)
 
     except Exception as e:
         result["error"] = str(e)
