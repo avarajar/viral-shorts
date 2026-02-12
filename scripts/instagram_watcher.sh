@@ -31,8 +31,19 @@ fi
 touch "$LOCK"
 echo "$LOG_PREFIX Found Instagram manifest, starting upload..."
 
+# Determine max uploads based on time of day (Colombia = UTC-5)
+# Morning run (~7AM COL = 12 UTC): upload 2 reels
+# Afternoon run (~4PM COL = 21 UTC): upload 1 reel
+HOUR_UTC=$(date -u +%H)
+if [ "$HOUR_UTC" -lt 16 ]; then
+    MAX_UPLOADS=2
+else
+    MAX_UPLOADS=1
+fi
+echo "$LOG_PREFIX Hour UTC=$HOUR_UTC -> max uploads=$MAX_UPLOADS"
+
 # Run upload via Instagram Graph API
-RESULT=$(python3 /home/ubuntu/pipeline/scripts/upload_instagram.py --manifest "$MANIFEST" 2>>/home/ubuntu/pipeline/instagram_upload.log)
+RESULT=$(python3 /home/ubuntu/pipeline/scripts/upload_instagram.py --manifest "$MANIFEST" --max "$MAX_UPLOADS" 2>>/home/ubuntu/pipeline/instagram_upload.log)
 EXIT_CODE=$?
 
 echo "$LOG_PREFIX Upload result (exit=$EXIT_CODE): $RESULT"

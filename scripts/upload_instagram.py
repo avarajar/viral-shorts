@@ -279,8 +279,8 @@ def upload_short(video_path, title, tags=None):
     return upload_reel(video_url, caption, access_token, user_id)
 
 
-def upload_from_manifest(manifest_path):
-    """Upload all shorts from pipeline manifest."""
+def upload_from_manifest(manifest_path, max_uploads=None):
+    """Upload shorts from pipeline manifest. Optionally limit to max_uploads."""
     with open(manifest_path) as f:
         manifest = json.load(f)
 
@@ -290,6 +290,10 @@ def upload_from_manifest(manifest_path):
     shorts = manifest.get("shorts", [])
     if not shorts:
         return {"success": False, "error": "No shorts in manifest"}
+
+    if max_uploads and max_uploads < len(shorts):
+        print(f"  [limit] Uploading {max_uploads} of {len(shorts)} shorts", file=sys.stderr)
+        shorts = shorts[:max_uploads]
 
     access_token, user_id = get_access_token()
 
@@ -359,7 +363,13 @@ if __name__ == "__main__":
         else:
             print("No tokens. Run --auth first.", file=sys.stderr)
     elif sys.argv[1] == "--manifest" and len(sys.argv) > 2:
-        result = upload_from_manifest(sys.argv[2])
+        manifest_file = sys.argv[2]
+        max_up = None
+        if "--max" in sys.argv:
+            idx = sys.argv.index("--max")
+            if idx + 1 < len(sys.argv):
+                max_up = int(sys.argv[idx + 1])
+        result = upload_from_manifest(manifest_file, max_uploads=max_up)
         print(json.dumps(result, indent=2))
     else:
         video = sys.argv[1]
