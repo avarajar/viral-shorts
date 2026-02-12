@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# v2 - auto-deploy via GitHub Actions
+# v2.1 - auto-deploy via GitHub Actions
 """
 Master pipeline script. Orchestrates the full flow:
   scrape -> download -> narrate -> compile -> cleanup
