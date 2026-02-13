@@ -508,7 +508,7 @@
 
             if (connected) {
                 statusText.textContent = 'Connected — auto-publishing enabled';
-                connectArea.innerHTML = '<span class="status-badge connected">Connected</span>';
+                connectArea.innerHTML = '<span class="status-badge connected">Connected</span> <button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="disconnectTikTok()">Disconnect</button>';
             } else {
                 statusText.textContent = 'Not connected';
                 connectArea.innerHTML = '<button class="btn btn-primary btn-sm" onclick="connectTikTok()">Connect Account</button>';
