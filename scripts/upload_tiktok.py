@@ -266,16 +266,8 @@ def upload_short(video_path, title, tags=None):
     creator = query_creator(access_token)
     available = creator.get("privacy_level_options", ["SELF_ONLY"])
 
-    # Use best available privacy (sandbox only allows SELF_ONLY)
-    is_sandbox = CLIENT_KEY.startswith("sb")
-    if is_sandbox:
-        privacy = "SELF_ONLY"
-    else:
-        privacy = "SELF_ONLY"
-        for pref in ["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY"]:
-            if pref in available:
-                privacy = pref
-                break
+    # Default to SELF_ONLY while app is under review; change manually once approved
+    privacy = "SELF_ONLY"
 
     # Build description with hashtags
     tag_str = ""
