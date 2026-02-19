@@ -194,6 +194,205 @@
             vertical-align: middle;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── Post Page ──────────────────────────────────── */
+        .creator-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            margin-bottom: 24px;
+        }
+        .creator-card .creator-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .creator-card .creator-details .creator-handle { color: #fff; font-weight: 600; font-size: 0.95rem; }
+        .creator-card .creator-details .creator-name { color: #888; font-size: 0.85rem; }
+
+        .post-form .form-group { margin-bottom: 20px; }
+        .post-form label {
+            display: block;
+            font-size: 0.85rem;
+            color: #ccc;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .post-form textarea {
+            width: 100%;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px;
+            color: #e6edf3;
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.5;
+        }
+        .post-form textarea:focus { outline: none; border-color: #58a6ff; }
+        .post-form select {
+            width: 100%;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #e6edf3;
+            font-family: inherit;
+            font-size: 0.9rem;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            cursor: pointer;
+        }
+        .post-form select:focus { outline: none; border-color: #58a6ff; }
+        .post-form select option { background: #161b22; color: #e6edf3; }
+
+        .video-preview {
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .video-preview .preview-thumb {
+            width: 140px;
+            height: 248px;
+            background: linear-gradient(145deg, #1a1a2e, #16213e, #0f3460);
+            border-radius: 10px;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .video-preview .preview-thumb::after {
+            content: '';
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(4px);
+            position: absolute;
+        }
+        .video-preview .preview-thumb .play-icon {
+            position: relative;
+            z-index: 1;
+            font-size: 1.4rem;
+            color: rgba(255,255,255,0.9);
+        }
+        .video-preview .preview-label { color: #666; font-size: 0.8rem; }
+
+        .checkbox-group { display: flex; flex-direction: column; gap: 10px; }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #58a6ff;
+            cursor: pointer;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+        }
+        .toggle-row .toggle-info .toggle-title { color: #ccc; font-size: 0.9rem; font-weight: 500; }
+        .toggle-row .toggle-info .toggle-desc { color: #666; font-size: 0.8rem; margin-top: 2px; }
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-switch .slider {
+            position: absolute;
+            inset: 0;
+            background: #333;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle-switch .slider::before {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 3px;
+            top: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle-switch input:checked + .slider { background: #58a6ff; }
+        .toggle-switch input:checked + .slider::before { transform: translateX(20px); }
+
+        .commercial-sub {
+            padding: 12px 16px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .legal-text {
+            font-size: 0.8rem;
+            color: #666;
+            margin: 20px 0;
+            padding: 12px 16px;
+            border-left: 2px solid #30363d;
+        }
+        .legal-text a { color: #58a6ff; text-decoration: none; }
+        .legal-text a:hover { text-decoration: underline; }
+
+        .btn-tiktok {
+            background: #fe2c55;
+            color: #fff;
+            width: 100%;
+            padding: 14px 24px;
+            font-size: 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .processing-notice {
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-top: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .processing-notice .notice-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+        .processing-notice .notice-text { color: #aaa; font-size: 0.85rem; line-height: 1.5; }
+
+        .char-count { font-size: 0.75rem; color: #666; text-align: right; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -205,6 +404,7 @@
 
         <nav>
             <a onclick="showPage('dashboard')" id="nav-dashboard" class="active">Dashboard</a>
+            <a onclick="showPage('post')" id="nav-post">Post</a>
             <a onclick="showPage('about')" id="nav-about">About</a>
             <a onclick="showPage('privacy')" id="nav-privacy">Privacy Policy</a>
             <a onclick="showPage('terms')" id="nav-terms">Terms of Service</a>
@@ -335,6 +535,125 @@
                     </div>
                 </section>
             </div>
+        </div>
+
+        <!-- ═══ Post to TikTok ═══ -->
+        <div id="page-post" class="page">
+            <section>
+                <h2>Post to TikTok</h2>
+
+                <!-- Post Form -->
+                <div id="post-form-area">
+                    <!-- Creator Info -->
+                    <div class="creator-card">
+                        <div class="creator-avatar">
+                            <svg width="22" height="24" viewBox="0 0 20 22" fill="none"><path d="M14.67 0H11.08V15.02C11.08 16.69 9.72 18.05 8.04 18.05C6.36 18.05 5 16.69 5 15.02C5 13.38 6.33 12.05 7.95 12V8.43C4.39 8.48 1.5 11.4 1.5 15.02C1.5 18.67 4.45 21.59 8.08 21.59C11.71 21.59 14.67 18.64 14.67 15.02V7.3C16.04 8.3 17.72 8.88 19.5 8.91V5.34C16.83 5.24 14.67 2.86 14.67 0Z" fill="white"/></svg>
+                        </div>
+                        <div class="creator-details">
+                            <div class="creator-handle">@joseantonioandrad530</div>
+                            <div class="creator-name">Ashen Tales</div>
+                        </div>
+                    </div>
+
+                    <!-- Video Preview -->
+                    <div class="video-preview">
+                        <div class="preview-thumb">
+                            <span class="play-icon">&#9654;</span>
+                        </div>
+                        <div class="preview-label">Video Preview &mdash; 0:58</div>
+                    </div>
+
+                    <!-- Post Form -->
+                    <div class="app-card post-form">
+                        <!-- Title -->
+                        <div class="form-group">
+                            <label for="post-title">Title</label>
+                            <textarea id="post-title" maxlength="150" placeholder="Write a title for your video..." oninput="updateCharCount()">The Vanishing Hitchhiker: A truck driver picks up a silent woman on a foggy highway — then she disappears. #scarystory #horror #urbanlegend</textarea>
+                            <div class="char-count"><span id="title-char-count">0</span>/150</div>
+                        </div>
+
+                        <!-- Privacy Level -->
+                        <div class="form-group">
+                            <label for="post-privacy">Privacy Level</label>
+                            <select id="post-privacy">
+                                <option value="" disabled selected>Select privacy level</option>
+                                <option value="PUBLIC_TO_EVERYONE">Public to Everyone</option>
+                                <option value="MUTUAL_FOLLOW_FRIENDS">Mutual Follow Friends</option>
+                                <option value="SELF_ONLY">Self Only</option>
+                            </select>
+                        </div>
+
+                        <!-- Interaction Settings -->
+                        <div class="form-group">
+                            <label>Interaction Settings</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="allow-comments"> Allow Comments
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="allow-duets"> Allow Duets
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="allow-stitches"> Allow Stitches
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Commercial Content Disclosure -->
+                        <div class="form-group">
+                            <div class="toggle-row">
+                                <div class="toggle-info">
+                                    <div class="toggle-title">Disclose commercial content</div>
+                                    <div class="toggle-desc">Turn on if this video promotes goods or services in exchange for something of value</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="commercial-toggle" onchange="toggleCommercial()">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div id="commercial-sub-options" class="commercial-sub" style="display:none;">
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="your-brand"> Your Brand
+                                        <span style="color:#666; font-size:0.8rem; margin-left:4px;">— You are promoting yourself or your own business</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="branded-content"> Branded Content
+                                        <span style="color:#666; font-size:0.8rem; margin-left:4px;">— You are promoting another brand or a third party</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Legal Declaration -->
+                        <div class="legal-text">
+                            By posting, you agree to TikTok's <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.
+                        </div>
+
+                        <!-- Post Button -->
+                        <button class="btn btn-tiktok" onclick="submitPost()">
+                            <svg width="18" height="20" viewBox="0 0 20 22" fill="none"><path d="M14.67 0H11.08V15.02C11.08 16.69 9.72 18.05 8.04 18.05C6.36 18.05 5 16.69 5 15.02C5 13.38 6.33 12.05 7.95 12V8.43C4.39 8.48 1.5 11.4 1.5 15.02C1.5 18.67 4.45 21.59 8.08 21.59C11.71 21.59 14.67 18.64 14.67 15.02V7.3C16.04 8.3 17.72 8.88 19.5 8.91V5.34C16.83 5.24 14.67 2.86 14.67 0Z" fill="white"/></svg>
+                            Post to TikTok
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Post Success State -->
+                <div id="post-success" style="display:none;">
+                    <div class="success-box">
+                        <div class="check">&#10003;</div>
+                        <h3>Video Submitted to TikTok</h3>
+                        <p>Your video has been uploaded and is now being processed.</p>
+                    </div>
+                    <div class="processing-notice">
+                        <span class="notice-icon">&#8987;</span>
+                        <span class="notice-text">Your video is being processed by TikTok. It may take a few minutes before it appears on your profile. You will receive a notification once it is published.</span>
+                    </div>
+                    <div style="text-align:center; margin-top:24px;">
+                        <button class="btn btn-outline btn-sm" onclick="resetPostForm()">Post Another Video</button>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <!-- ═══ About ═══ -->
@@ -553,8 +872,47 @@
             }
         }
 
+        // ─── Post Form ──────────────────────────────────
+        function updateCharCount() {
+            const textarea = document.getElementById('post-title');
+            document.getElementById('title-char-count').textContent = textarea.value.length;
+        }
+
+        function toggleCommercial() {
+            const sub = document.getElementById('commercial-sub-options');
+            const toggle = document.getElementById('commercial-toggle');
+            sub.style.display = toggle.checked ? 'block' : 'none';
+            if (!toggle.checked) {
+                document.getElementById('your-brand').checked = false;
+                document.getElementById('branded-content').checked = false;
+            }
+        }
+
+        function submitPost() {
+            const title = document.getElementById('post-title').value.trim();
+            const privacy = document.getElementById('post-privacy').value;
+
+            if (!title) { alert('Please enter a title for your video.'); return; }
+            if (!privacy) { alert('Please select a privacy level.'); return; }
+
+            document.getElementById('post-form-area').style.display = 'none';
+            document.getElementById('post-success').style.display = 'block';
+        }
+
+        function resetPostForm() {
+            document.getElementById('post-form-area').style.display = 'block';
+            document.getElementById('post-success').style.display = 'none';
+            document.getElementById('post-privacy').selectedIndex = 0;
+            document.getElementById('allow-comments').checked = false;
+            document.getElementById('allow-duets').checked = false;
+            document.getElementById('allow-stitches').checked = false;
+            document.getElementById('commercial-toggle').checked = false;
+            toggleCommercial();
+        }
+
         // ─── Init ────────────────────────────────────────
         handleCallback();
+        updateCharCount();
     </script>
 </body>
 </html>
