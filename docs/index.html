@@ -393,6 +393,36 @@
         .processing-notice .notice-text { color: #aaa; font-size: 0.85rem; line-height: 1.5; }
 
         .char-count { font-size: 0.75rem; color: #666; text-align: right; margin-top: 4px; }
+
+        .interaction-note {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: #1a1a2e;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #8b949e;
+        }
+        .checkbox-label.disabled-by-privacy {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .checkbox-label.disabled-by-privacy input[type="checkbox"] {
+            cursor: not-allowed;
+        }
+        .privacy-interaction-banner {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: #16213e;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            color: #8b949e;
+            line-height: 1.5;
+        }
+        .privacy-interaction-banner strong { color: #aaa; }
     </style>
 </head>
 <body>
@@ -592,15 +622,18 @@
                         <div class="form-group">
                             <label>Interaction Settings</label>
                             <div class="checkbox-group">
-                                <label class="checkbox-label">
+                                <label class="checkbox-label" id="label-comments">
                                     <input type="checkbox" id="allow-comments"> Allow Comments
                                 </label>
-                                <label class="checkbox-label">
+                                <label class="checkbox-label" id="label-duets">
                                     <input type="checkbox" id="allow-duets"> Allow Duets
                                 </label>
-                                <label class="checkbox-label">
+                                <label class="checkbox-label" id="label-stitches">
                                     <input type="checkbox" id="allow-stitches"> Allow Stitches
                                 </label>
+                            </div>
+                            <div class="privacy-interaction-banner" id="privacy-interaction-banner">
+                                <strong>Privacy restriction:</strong> Duet and Stitch are not available for <em>Self Only</em> videos. To enable these interactions, change the privacy setting to <em>Public</em> or <em>Friends</em>.
                             </div>
                         </div>
 
@@ -632,16 +665,19 @@
                             </div>
                             <div id="commercial-sub-options" class="commercial-sub" style="display:none;">
                                 <div class="checkbox-group">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="your-brand" onchange="updateCommercialState()"> Your Brand
-                                        <span style="color:#666; font-size:0.8rem; margin-left:4px;">— You are promoting yourself or your own business</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="branded-content" onchange="updateCommercialState()"> Branded Content
-                                        <span style="color:#666; font-size:0.8rem; margin-left:4px;">— You are promoting another brand or a third party</span>
-                                    </label>
+                                    <div>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="your-brand" onchange="updateCommercialState()"> Your Brand
+                                        </label>
+                                        <div id="your-brand-notice" style="display:none; margin: 4px 0 0 28px; font-size:0.8rem; color:#8b949e;">Your photo/video will be labeled as <strong style="color:#aaa;">"Promotional content"</strong></div>
+                                    </div>
+                                    <div>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="branded-content" onchange="updateCommercialState()"> Branded Content
+                                        </label>
+                                        <div id="branded-content-notice" style="display:none; margin: 4px 0 0 28px; font-size:0.8rem; color:#8b949e;">Your photo/video will be labeled as <strong style="color:#aaa;">"Paid partnership"</strong></div>
+                                    </div>
                                 </div>
-                                <div id="commercial-label-notice" style="display:none; margin-top:10px; padding:10px 12px; background:#1a1a2e; border-radius:6px; font-size:0.8rem; color:#8b949e;"></div>
                                 <div id="commercial-privacy-warning" style="display:none; margin-top:8px; padding:10px 12px; background:#2a1a1a; border:1px solid #3a2a2a; border-radius:6px; font-size:0.8rem; color:#ffa198;"></div>
                             </div>
                         </div>
@@ -933,6 +969,33 @@
             };
         }
 
+        function updateInteractionBasedOnPrivacy() {
+            const privacy = document.getElementById('post-privacy').value;
+            const duetCheckbox = document.getElementById('allow-duets');
+            const stitchCheckbox = document.getElementById('allow-stitches');
+            const labelDuets = document.getElementById('label-duets');
+            const labelStitches = document.getElementById('label-stitches');
+            const banner = document.getElementById('privacy-interaction-banner');
+
+            const isSelfOnly = privacy === 'SELF_ONLY';
+
+            // Disable/enable Duet and Stitch based on privacy
+            duetCheckbox.disabled = isSelfOnly;
+            stitchCheckbox.disabled = isSelfOnly;
+
+            if (isSelfOnly) {
+                duetCheckbox.checked = false;
+                stitchCheckbox.checked = false;
+                labelDuets.classList.add('disabled-by-privacy');
+                labelStitches.classList.add('disabled-by-privacy');
+                banner.style.display = 'block';
+            } else {
+                labelDuets.classList.remove('disabled-by-privacy');
+                labelStitches.classList.remove('disabled-by-privacy');
+                banner.style.display = 'none';
+            }
+        }
+
         function toggleCommercial() {
             const sub = document.getElementById('commercial-sub-options');
             const toggle = document.getElementById('commercial-toggle');
@@ -950,46 +1013,41 @@
             const brandedContent = document.getElementById('branded-content').checked;
             const privacySelect = document.getElementById('post-privacy');
             const selfOnlyOption = privacySelect.querySelector('option[value="SELF_ONLY"]');
-            const labelNotice = document.getElementById('commercial-label-notice');
+            const yourBrandNotice = document.getElementById('your-brand-notice');
+            const brandedContentNotice = document.getElementById('branded-content-notice');
             const privacyWarning = document.getElementById('commercial-privacy-warning');
             const legalEl = document.getElementById('legal-declaration');
 
             // Reset
-            labelNotice.style.display = 'none';
+            yourBrandNotice.style.display = 'none';
+            brandedContentNotice.style.display = 'none';
             privacyWarning.style.display = 'none';
             if (selfOnlyOption) selfOnlyOption.disabled = false;
 
             if (commercialOn) {
-                // Show label notices
-                if (yourBrand && brandedContent) {
-                    labelNotice.textContent = 'Your video will be labeled as "Promotional content" and "Paid partnership".';
-                    labelNotice.style.display = 'block';
-                } else if (yourBrand) {
-                    labelNotice.textContent = 'Your video will be labeled as "Promotional content".';
-                    labelNotice.style.display = 'block';
-                } else if (brandedContent) {
-                    labelNotice.textContent = 'Your video will be labeled as "Paid partnership".';
-                    labelNotice.style.display = 'block';
-                }
+                // Show per-checkbox label notices immediately when checked
+                if (yourBrand) yourBrandNotice.style.display = 'block';
+                if (brandedContent) brandedContentNotice.style.display = 'block';
 
                 // Branded content cannot be SELF_ONLY
                 if (brandedContent) {
                     if (selfOnlyOption) selfOnlyOption.disabled = true;
                     if (privacySelect.value === 'SELF_ONLY') {
                         privacySelect.value = '';
-                        privacyWarning.textContent = 'Branded content cannot be set to "Self Only". Please select Public or Friends.';
+                        updateInteractionBasedOnPrivacy();
+                        privacyWarning.textContent = 'Branded content cannot be set to "Self Only". Please select a different privacy level.';
                         privacyWarning.style.display = 'block';
                     }
                 }
 
-                // Update legal text based on selections
+                // Update legal text based on selections (Point 4)
                 if (brandedContent) {
                     legalEl.innerHTML = 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/bc-policy" target="_blank">Branded Content Policy</a> and <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.';
                 } else {
                     legalEl.innerHTML = 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.';
                 }
             } else {
-                // Default legal text
+                // Default legal text (Point 4)
                 legalEl.innerHTML = 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.';
             }
 
@@ -1073,14 +1131,22 @@
             document.getElementById('video-player').src = '';
             document.getElementById('video-dropzone').style.display = 'block';
             document.getElementById('video-info').style.display = 'none';
+            document.getElementById('your-brand-notice').style.display = 'none';
+            document.getElementById('branded-content-notice').style.display = 'none';
+            document.getElementById('privacy-interaction-banner').style.display = 'none';
             toggleCommercial();
+            updateInteractionBasedOnPrivacy();
             validateForm();
         }
 
         // ─── Init ────────────────────────────────────────
         handleCallback();
         updateCharCount();
-        document.getElementById('post-privacy').addEventListener('change', function() { updateCommercialState(); validateForm(); });
+        document.getElementById('post-privacy').addEventListener('change', function() {
+            updateInteractionBasedOnPrivacy();
+            updateCommercialState();
+            validateForm();
+        });
     </script>
 </body>
 </html>
