@@ -970,10 +970,10 @@
                     display_name: '@joseantonioandrad530',
                     can_post: true,
                     max_video_post_duration_sec: 600,
-                    privacy_level_options: ['SELF_ONLY'],  // SELF_ONLY only during review
+                    privacy_level_options: ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'SELF_ONLY'],
                     comment_disabled: false,
-                    duet_disabled: true,   // restricted by creator settings
-                    stitch_disabled: true, // restricted by creator settings
+                    duet_disabled: false,
+                    stitch_disabled: false,
                 };
 
                 if (!creatorInfo.can_post) {
