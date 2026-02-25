@@ -574,15 +574,21 @@
 
                 <!-- Post Form -->
                 <div id="post-form-area">
-                    <!-- Creator Info -->
-                    <div class="creator-card">
+                    <!-- Creator Info (Point 1: retrieved from creator_info API) -->
+                    <div class="creator-card" id="creator-card">
                         <div class="creator-avatar">
                             <svg width="22" height="24" viewBox="0 0 20 22" fill="none"><path d="M14.67 0H11.08V15.02C11.08 16.69 9.72 18.05 8.04 18.05C6.36 18.05 5 16.69 5 15.02C5 13.38 6.33 12.05 7.95 12V8.43C4.39 8.48 1.5 11.4 1.5 15.02C1.5 18.67 4.45 21.59 8.08 21.59C11.71 21.59 14.67 18.64 14.67 15.02V7.3C16.04 8.3 17.72 8.88 19.5 8.91V5.34C16.83 5.24 14.67 2.86 14.67 0Z" fill="white"/></svg>
                         </div>
-                        <div class="creator-details">
-                            <div class="creator-handle">@joseantonioandrad530</div>
-                            <div class="creator-name">Ashen Tales</div>
+                        <div class="creator-details" id="creator-details">
+                            <div class="creator-handle" id="creator-handle">
+                                <span class="loading-spinner"></span> Loading account info...
+                            </div>
+                            <div class="creator-name" id="creator-name" style="color:#555;">Fetching from TikTok API</div>
                         </div>
+                    </div>
+                    <!-- Creator cannot post warning -->
+                    <div id="creator-cannot-post" style="display:none; margin-bottom:16px; padding:12px 16px; background:#1f0d0d; border:1px solid #3a1a1a; border-radius:8px; font-size:0.85rem; color:#ffa198;">
+                        Your account has reached its daily posting limit. Please try again later.
                     </div>
 
                     <!-- Video Upload & Preview -->
@@ -651,7 +657,7 @@
                             </div>
                         </div>
 
-                        <!-- Commercial Content Disclosure -->
+                        <!-- Commercial Content Disclosure (Point 3) -->
                         <div class="form-group">
                             <div class="toggle-row">
                                 <div class="toggle-info">
@@ -677,6 +683,12 @@
                                         </label>
                                         <div id="branded-content-notice" style="display:none; margin: 4px 0 0 28px; font-size:0.8rem; color:#8b949e;">Your photo/video will be labeled as <strong style="color:#aaa;">"Paid partnership"</strong></div>
                                     </div>
+                                </div>
+                                <!-- Shown when both are selected: only "Paid partnership" per guideline -->
+                                <div id="both-selected-notice" style="display:none; margin-top:10px; padding:10px 12px; background:#1a1a2e; border-radius:6px; font-size:0.8rem; color:#8b949e;">Your photo/video will be labeled as <strong style="color:#aaa;">"Paid partnership"</strong></div>
+                                <!-- Shown when nothing selected but toggle is on -->
+                                <div id="commercial-none-warning" style="display:none; margin-top:8px; padding:10px 12px; background:#2a1a0a; border:1px solid #3a2a0a; border-radius:6px; font-size:0.8rem; color:#e3b341;">
+                                    You need to indicate if your content promotes yourself, a third party, or both.
                                 </div>
                                 <div id="commercial-privacy-warning" style="display:none; margin-top:8px; padding:10px 12px; background:#2a1a1a; border:1px solid #3a2a2a; border-radius:6px; font-size:0.8rem; color:#ffa198;"></div>
                             </div>
@@ -849,6 +861,11 @@
             document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
             document.getElementById('page-' + page).classList.add('active');
             document.getElementById('nav-' + page).classList.add('active');
+            // Point 1: retrieve latest creator info when rendering the Post page
+            if (page === 'post') {
+                creatorInfo = null;
+                loadCreatorInfo();
+            }
         }
 
         // ─── TikTok OAuth ────────────────────────────────
@@ -929,6 +946,90 @@
             }
         }
 
+        // ─── Creator Info (Point 1) ──────────────────────
+        // Simulates fetching creator info from creator_info API.
+        // In production this calls: POST /v2/post/publish/creator_info/query/
+        let creatorInfo = null;
+
+        function loadCreatorInfo() {
+            const handleEl = document.getElementById('creator-handle');
+            const nameEl = document.getElementById('creator-name');
+            const postForm = document.getElementById('post-form-area');
+            const cannotPostEl = document.getElementById('creator-cannot-post');
+
+            // Show loading state
+            handleEl.innerHTML = '<span class="loading-spinner"></span> Loading account info...';
+            nameEl.style.color = '#555';
+            nameEl.textContent = 'Fetching from TikTok API';
+
+            // Simulate API call to creator_info endpoint
+            setTimeout(function() {
+                // Simulated creator_info API response
+                creatorInfo = {
+                    nickname: 'Ashen Tales',
+                    display_name: '@joseantonioandrad530',
+                    can_post: true,
+                    max_video_post_duration_sec: 600,
+                    privacy_level_options: ['SELF_ONLY'],  // SELF_ONLY only during review
+                    comment_disabled: false,
+                    duet_disabled: true,   // restricted by creator settings
+                    stitch_disabled: true, // restricted by creator settings
+                };
+
+                if (!creatorInfo.can_post) {
+                    cannotPostEl.style.display = 'block';
+                    postForm.style.pointerEvents = 'none';
+                    postForm.style.opacity = '0.5';
+                    return;
+                }
+
+                // Populate creator display
+                handleEl.textContent = creatorInfo.display_name;
+                nameEl.textContent = creatorInfo.nickname;
+                nameEl.style.color = '';
+
+                // Populate privacy dropdown from API options
+                const privacySelect = document.getElementById('post-privacy');
+                privacySelect.innerHTML = '<option value="" disabled selected>Select privacy level</option>';
+                const privacyLabels = {
+                    'PUBLIC_TO_EVERYONE': 'Public to Everyone',
+                    'MUTUAL_FOLLOW_FRIENDS': 'Mutual Follow Friends',
+                    'SELF_ONLY': 'Self Only'
+                };
+                creatorInfo.privacy_level_options.forEach(function(level) {
+                    const opt = document.createElement('option');
+                    opt.value = level;
+                    opt.textContent = privacyLabels[level] || level;
+                    privacySelect.appendChild(opt);
+                });
+
+                // Apply creator_info interaction restrictions
+                applyCreatorInfoRestrictions();
+
+                validateForm();
+            }, 1200);
+        }
+
+        function applyCreatorInfoRestrictions() {
+            if (!creatorInfo) return;
+
+            const duetCheckbox = document.getElementById('allow-duets');
+            const stitchCheckbox = document.getElementById('allow-stitches');
+            const labelDuets = document.getElementById('label-duets');
+            const labelStitches = document.getElementById('label-stitches');
+
+            if (creatorInfo.duet_disabled) {
+                duetCheckbox.disabled = true;
+                duetCheckbox.checked = false;
+                labelDuets.classList.add('disabled-by-privacy');
+            }
+            if (creatorInfo.stitch_disabled) {
+                stitchCheckbox.disabled = true;
+                stitchCheckbox.checked = false;
+                labelStitches.classList.add('disabled-by-privacy');
+            }
+        }
+
         // ─── Post Form ──────────────────────────────────
         let selectedVideoFile = null;
 
@@ -978,20 +1079,37 @@
             const banner = document.getElementById('privacy-interaction-banner');
 
             const isSelfOnly = privacy === 'SELF_ONLY';
+            // Also respect creator_info API restrictions
+            const creatorDuetDisabled = creatorInfo && creatorInfo.duet_disabled;
+            const creatorStitchDisabled = creatorInfo && creatorInfo.stitch_disabled;
 
-            // Disable/enable Duet and Stitch based on privacy
-            duetCheckbox.disabled = isSelfOnly;
-            stitchCheckbox.disabled = isSelfOnly;
+            const duetDisabled = isSelfOnly || creatorDuetDisabled;
+            const stitchDisabled = isSelfOnly || creatorStitchDisabled;
 
-            if (isSelfOnly) {
+            duetCheckbox.disabled = duetDisabled;
+            stitchCheckbox.disabled = stitchDisabled;
+
+            if (duetDisabled) {
                 duetCheckbox.checked = false;
-                stitchCheckbox.checked = false;
                 labelDuets.classList.add('disabled-by-privacy');
-                labelStitches.classList.add('disabled-by-privacy');
-                banner.style.display = 'block';
             } else {
                 labelDuets.classList.remove('disabled-by-privacy');
+            }
+
+            if (stitchDisabled) {
+                stitchCheckbox.checked = false;
+                labelStitches.classList.add('disabled-by-privacy');
+            } else {
                 labelStitches.classList.remove('disabled-by-privacy');
+            }
+
+            // Show explanation banner for SELF_ONLY privacy restriction
+            if (isSelfOnly) {
+                banner.style.display = 'block';
+            } else if (creatorDuetDisabled || creatorStitchDisabled) {
+                banner.innerHTML = '<strong>Account restriction:</strong> Some interactions have been disabled based on your TikTok account settings.';
+                banner.style.display = 'block';
+            } else {
                 banner.style.display = 'none';
             }
         }
@@ -1018,16 +1136,29 @@
             const privacyWarning = document.getElementById('commercial-privacy-warning');
             const legalEl = document.getElementById('legal-declaration');
 
+            const bothSelectedNotice = document.getElementById('both-selected-notice');
+            const noneWarning = document.getElementById('commercial-none-warning');
+
             // Reset
             yourBrandNotice.style.display = 'none';
             brandedContentNotice.style.display = 'none';
+            bothSelectedNotice.style.display = 'none';
+            noneWarning.style.display = 'none';
             privacyWarning.style.display = 'none';
             if (selfOnlyOption) selfOnlyOption.disabled = false;
 
             if (commercialOn) {
-                // Show per-checkbox label notices immediately when checked
-                if (yourBrand) yourBrandNotice.style.display = 'block';
-                if (brandedContent) brandedContentNotice.style.display = 'block';
+                if (yourBrand && brandedContent) {
+                    // Both selected: per guideline, show only "Paid partnership"
+                    bothSelectedNotice.style.display = 'block';
+                } else if (yourBrand) {
+                    yourBrandNotice.style.display = 'block';
+                } else if (brandedContent) {
+                    brandedContentNotice.style.display = 'block';
+                } else {
+                    // Nothing selected: show the required warning message
+                    noneWarning.style.display = 'block';
+                }
 
                 // Branded content cannot be SELF_ONLY
                 if (brandedContent) {
@@ -1133,7 +1264,10 @@
             document.getElementById('video-info').style.display = 'none';
             document.getElementById('your-brand-notice').style.display = 'none';
             document.getElementById('branded-content-notice').style.display = 'none';
+            document.getElementById('both-selected-notice').style.display = 'none';
+            document.getElementById('commercial-none-warning').style.display = 'none';
             document.getElementById('privacy-interaction-banner').style.display = 'none';
+            document.getElementById('creator-cannot-post').style.display = 'none';
             toggleCommercial();
             updateInteractionBasedOnPrivacy();
             validateForm();
@@ -1147,6 +1281,10 @@
             updateCommercialState();
             validateForm();
         });
+        // If page loads directly on the post tab, load creator info
+        if (document.getElementById('page-post').classList.contains('active')) {
+            loadCreatorInfo();
+        }
     </script>
 </body>
 </html>
