@@ -303,6 +303,10 @@ def upload_from_manifest(manifest_path, max_uploads=None):
     results = []
     for i, short in enumerate(shorts):
         path = short.get("path", "")
+        # Translate Docker container path to host path
+        # assemble_video.py runs inside Docker where /pipeline maps to /home/ubuntu/pipeline on host
+        if path.startswith("/pipeline/"):
+            path = "/home/ubuntu/pipeline/" + path[len("/pipeline/"):]
         title = short.get("title", f"Short {i+1}")
         tags = short.get("tags", [])
 
