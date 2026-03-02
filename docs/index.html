@@ -218,6 +218,18 @@
         .creator-card .creator-details .creator-handle { color: #fff; font-weight: 600; font-size: 0.95rem; }
         .creator-card .creator-details .creator-name { color: #888; font-size: 0.85rem; }
 
+        .api-badge {
+            margin-left: auto;
+            padding: 3px 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            color: #58a6ff;
+            font-family: monospace;
+            white-space: nowrap;
+        }
+
         .post-form .form-group { margin-bottom: 20px; }
         .post-form label {
             display: block;
@@ -225,6 +237,18 @@
             color: #ccc;
             margin-bottom: 6px;
             font-weight: 500;
+        }
+        .post-form .form-label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .post-form .form-label-row label { margin-bottom: 0; }
+        .post-form .form-label-row .api-source {
+            font-size: 0.72rem;
+            color: #58a6ff;
+            font-family: monospace;
         }
         .post-form textarea {
             width: 100%;
@@ -257,6 +281,41 @@
         }
         .post-form select:focus { outline: none; border-color: #58a6ff; }
         .post-form select option { background: #161b22; color: #e6edf3; }
+        .post-form select option:disabled { color: #555; }
+
+        /* Interaction settings panel */
+        .interaction-status-panel {
+            margin-top: 12px;
+            background: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+        .interaction-status-panel .panel-title {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: #58a6ff;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .interaction-status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 0.82rem;
+        }
+        .interaction-status-row .isr-name { color: #ccc; min-width: 70px; }
+        .interaction-status-row .isr-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .interaction-status-row .isr-dot.on { background: #3fb950; }
+        .interaction-status-row .isr-dot.off { background: #f85149; }
+        .interaction-status-row .isr-reason { color: #666; font-size: 0.78rem; }
 
         .video-preview {
             background: #111;
@@ -264,7 +323,7 @@
             border-radius: 10px;
             padding: 24px;
             text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
         .video-preview .preview-thumb {
             width: 140px;
@@ -294,6 +353,13 @@
             color: rgba(255,255,255,0.9);
         }
         .video-preview .preview-label { color: #666; font-size: 0.8rem; }
+        .video-preview-label {
+            font-size: 0.85rem;
+            color: #ccc;
+            font-weight: 500;
+            margin-bottom: 12px;
+            text-align: left;
+        }
 
         .checkbox-group { display: flex; flex-direction: column; gap: 10px; }
         .checkbox-label {
@@ -394,35 +460,60 @@
 
         .char-count { font-size: 0.75rem; color: #666; text-align: right; margin-top: 4px; }
 
-        .interaction-note {
-            display: none;
-            margin-top: 10px;
-            padding: 10px 12px;
-            background: #1a1a2e;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            color: #8b949e;
-        }
         .checkbox-label.disabled-by-privacy {
-            opacity: 0.4;
+            opacity: 0.38;
             cursor: not-allowed;
         }
         .checkbox-label.disabled-by-privacy input[type="checkbox"] {
             cursor: not-allowed;
         }
-        .privacy-interaction-banner {
-            display: none;
-            margin-top: 12px;
-            padding: 10px 14px;
-            background: #16213e;
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            font-size: 0.82rem;
-            color: #8b949e;
+
+        /* Warning / info boxes */
+        .info-box {
+            margin-top: 8px;
+            padding: 9px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
             line-height: 1.5;
         }
-        .privacy-interaction-banner strong { color: #aaa; }
+        .info-box.warn {
+            background: #2a1a0a;
+            border: 1px solid #3a2a0a;
+            color: #e3b341;
+        }
+        .info-box.error {
+            background: #2a1a1a;
+            border: 1px solid #3a2a2a;
+            color: #ffa198;
+        }
+        .info-box.info {
+            background: #161b22;
+            border: 1px solid #30363d;
+            color: #8b949e;
+        }
+        .info-box.privacy-restrict {
+            background: #16213e;
+            border: 1px solid #30363d;
+            color: #8b949e;
+        }
+
+        .section-divider {
+            border: none;
+            border-top: 1px solid #1a1a1a;
+            margin: 24px 0;
+        }
+
+        .guideline-point {
+            display: inline-block;
+            padding: 2px 7px;
+            background: #1c2a3a;
+            border: 1px solid #2a3a4a;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            color: #58a6ff;
+            font-family: monospace;
+            margin-bottom: 6px;
+        }
     </style>
 </head>
 <body>
@@ -574,7 +665,9 @@
 
                 <!-- Post Form -->
                 <div id="post-form-area">
-                    <!-- Creator Info (Point 1: retrieved from creator_info API) -->
+
+                    <!-- ── POINT 1: Creator Info ────────────────────────── -->
+                    <div class="guideline-point">Point 1 — Creator Info (creator_info API)</div>
                     <div class="creator-card" id="creator-card">
                         <div class="creator-avatar">
                             <svg width="22" height="24" viewBox="0 0 20 22" fill="none"><path d="M14.67 0H11.08V15.02C11.08 16.69 9.72 18.05 8.04 18.05C6.36 18.05 5 16.69 5 15.02C5 13.38 6.33 12.05 7.95 12V8.43C4.39 8.48 1.5 11.4 1.5 15.02C1.5 18.67 4.45 21.59 8.08 21.59C11.71 21.59 14.67 18.64 14.67 15.02V7.3C16.04 8.3 17.72 8.88 19.5 8.91V5.34C16.83 5.24 14.67 2.86 14.67 0Z" fill="white"/></svg>
@@ -583,29 +676,19 @@
                             <div class="creator-handle" id="creator-handle">
                                 <span class="loading-spinner"></span> Loading account info...
                             </div>
-                            <div class="creator-name" id="creator-name" style="color:#555;">Fetching from TikTok API</div>
+                            <div class="creator-name" id="creator-name" style="color:#555;">Fetching from TikTok API&hellip;</div>
                         </div>
+                        <span class="api-badge" id="creator-api-badge">POST /creator_info/query/</span>
                     </div>
                     <!-- Creator cannot post warning -->
                     <div id="creator-cannot-post" style="display:none; margin-bottom:16px; padding:12px 16px; background:#1f0d0d; border:1px solid #3a1a1a; border-radius:8px; font-size:0.85rem; color:#ffa198;">
-                        Your account has reached its daily posting limit. Please try again later.
+                        &#9888; Your account has reached its daily posting limit. Please try again later.
                     </div>
 
-                    <!-- Video Upload & Preview -->
-                    <div class="video-preview" id="video-upload-area">
-                        <div id="video-dropzone" onclick="document.getElementById('video-file').click()" style="cursor:pointer;">
-                            <div class="preview-thumb" id="preview-thumb-placeholder">
-                                <span class="play-icon" style="font-size:2rem;">&#8679;</span>
-                            </div>
-                            <div class="preview-label">Click to select a video file (MP4)</div>
-                        </div>
-                        <video id="video-player" controls style="display:none; max-width:200px; max-height:356px; border-radius:10px; margin:0 auto 12px;"></video>
-                        <div id="video-info" class="preview-label" style="display:none;"></div>
-                        <input type="file" id="video-file" accept="video/mp4" style="display:none;" onchange="handleVideoSelect(event)">
-                    </div>
+                    <!-- ── POINT 2: Post Metadata ───────────────────────── -->
+                    <div class="app-card post-form" id="post-metadata-card">
+                        <div class="guideline-point">Point 2 — Post Metadata</div>
 
-                    <!-- Post Form -->
-                    <div class="app-card post-form">
                         <!-- Title -->
                         <div class="form-group">
                             <label for="post-title">Title</label>
@@ -613,97 +696,159 @@
                             <div class="char-count"><span id="title-char-count">0</span>/150</div>
                         </div>
 
-                        <!-- Privacy Level -->
+                        <hr class="section-divider">
+
+                        <!-- Privacy Level (populated from creator_info API) -->
                         <div class="form-group">
-                            <label for="post-privacy">Privacy Level</label>
-                            <select id="post-privacy">
-                                <option value="" disabled selected>Select privacy level</option>
-                                <option value="PUBLIC_TO_EVERYONE">Public to Everyone</option>
-                                <option value="MUTUAL_FOLLOW_FRIENDS">Mutual Follow Friends</option>
-                                <option value="SELF_ONLY">Self Only</option>
+                            <div class="form-label-row">
+                                <label for="post-privacy">Privacy Level</label>
+                                <span class="api-source">privacy_level_options from creator_info</span>
+                            </div>
+                            <!-- Options populated dynamically from creator_info API — no hardcoded defaults -->
+                            <select id="post-privacy" onchange="onPrivacyChange()">
+                                <option value="" disabled selected>Select privacy level&hellip;</option>
                             </select>
+                            <!-- Shown when Branded Content is checked: SELF_ONLY is restricted -->
+                            <div id="branded-privacy-note" class="info-box error" style="display:none;">
+                                &#9888; Branded content visibility cannot be set to &ldquo;Only Me&rdquo;. Please select Public or Friends.
+                            </div>
                         </div>
 
-                        <!-- Interaction Settings -->
+                        <hr class="section-divider">
+
+                        <!-- Interaction Settings (with live status panel) -->
                         <div class="form-group">
-                            <label>Interaction Settings</label>
+                            <div class="form-label-row">
+                                <label>Interaction Settings</label>
+                                <span class="api-source">disabled state from creator_info</span>
+                            </div>
                             <div class="checkbox-group">
                                 <label class="checkbox-label" id="label-comments">
-                                    <input type="checkbox" id="allow-comments"> Allow Comments
+                                    <input type="checkbox" id="allow-comments" onchange="validateForm()"> Allow Comments
                                 </label>
                                 <label class="checkbox-label" id="label-duets">
-                                    <input type="checkbox" id="allow-duets"> Allow Duets
+                                    <input type="checkbox" id="allow-duets" onchange="validateForm()"> Allow Duets
                                 </label>
                                 <label class="checkbox-label" id="label-stitches">
-                                    <input type="checkbox" id="allow-stitches"> Allow Stitches
+                                    <input type="checkbox" id="allow-stitches" onchange="validateForm()"> Allow Stitches
                                 </label>
                             </div>
-                            <div class="privacy-interaction-banner" id="privacy-interaction-banner">
-                                <strong>Privacy restriction:</strong> Duet and Stitch are not available for <em>Self Only</em> videos. To enable these interactions, change the privacy setting to <em>Public</em> or <em>Friends</em>.
+
+                            <!-- Dynamic interaction status panel -->
+                            <div class="interaction-status-panel" id="interaction-status-panel">
+                                <div class="panel-title">Interaction Availability</div>
+                                <div class="interaction-status-row" id="isr-comments">
+                                    <span class="isr-dot on"></span>
+                                    <span class="isr-name">Comments</span>
+                                    <span class="isr-reason">Available</span>
+                                </div>
+                                <div class="interaction-status-row" id="isr-duets">
+                                    <span class="isr-dot on"></span>
+                                    <span class="isr-name">Duets</span>
+                                    <span class="isr-reason">Available</span>
+                                </div>
+                                <div class="interaction-status-row" id="isr-stitches">
+                                    <span class="isr-dot on"></span>
+                                    <span class="isr-name">Stitches</span>
+                                    <span class="isr-reason">Available</span>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- AI-Generated Content Disclosure -->
-                        <div class="form-group">
-                            <div class="toggle-row">
-                                <div class="toggle-info">
-                                    <div class="toggle-title">AI-generated content</div>
-                                    <div class="toggle-desc">This video contains AI-generated content (voice, visuals, or script)</div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="aigc-toggle" checked>
-                                    <span class="slider"></span>
-                                </label>
+                    <!-- ── POINT 3: Commercial Content Disclosure ──────── -->
+                    <div class="app-card post-form">
+                        <div class="guideline-point">Point 3 — Commercial Content Disclosure</div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Disclose commercial content</div>
+                                <div class="toggle-desc">Turn on if this video promotes goods or services in exchange for something of value</div>
                             </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="commercial-toggle" onchange="toggleCommercial()">
+                                <span class="slider"></span>
+                            </label>
                         </div>
 
-                        <!-- Commercial Content Disclosure (Point 3) -->
-                        <div class="form-group">
-                            <div class="toggle-row">
-                                <div class="toggle-info">
-                                    <div class="toggle-title">Disclose commercial content</div>
-                                    <div class="toggle-desc">Turn on if this video promotes goods or services in exchange for something of value</div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="commercial-toggle" onchange="toggleCommercial()">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div id="commercial-sub-options" class="commercial-sub" style="display:none;">
+                        <div id="commercial-sub-options" style="display:none;">
+                            <div class="commercial-sub">
                                 <div class="checkbox-group">
                                     <div>
                                         <label class="checkbox-label">
                                             <input type="checkbox" id="your-brand" onchange="updateCommercialState()"> Your Brand
                                         </label>
-                                        <div id="your-brand-notice" style="display:none; margin: 4px 0 0 28px; font-size:0.8rem; color:#8b949e;">Your photo/video will be labeled as <strong style="color:#aaa;">"Promotional content"</strong></div>
+                                        <div id="your-brand-notice" class="info-box info" style="display:none; margin-top:6px;">Your photo/video will be labeled as <strong style="color:#ccc;">&ldquo;Promotional content&rdquo;</strong></div>
                                     </div>
                                     <div>
-                                        <label class="checkbox-label">
+                                        <label class="checkbox-label" id="label-branded-content">
                                             <input type="checkbox" id="branded-content" onchange="updateCommercialState()"> Branded Content
                                         </label>
-                                        <div id="branded-content-notice" style="display:none; margin: 4px 0 0 28px; font-size:0.8rem; color:#8b949e;">Your photo/video will be labeled as <strong style="color:#aaa;">"Paid partnership"</strong></div>
+                                        <div id="branded-content-notice" class="info-box info" style="display:none; margin-top:6px;">Your photo/video will be labeled as <strong style="color:#ccc;">&ldquo;Paid partnership&rdquo;</strong></div>
                                     </div>
                                 </div>
-                                <!-- Shown when both are selected: only "Paid partnership" per guideline -->
-                                <div id="both-selected-notice" style="display:none; margin-top:10px; padding:10px 12px; background:#1a1a2e; border-radius:6px; font-size:0.8rem; color:#8b949e;">Your photo/video will be labeled as <strong style="color:#aaa;">"Paid partnership"</strong></div>
-                                <!-- Shown when nothing selected but toggle is on -->
-                                <div id="commercial-none-warning" style="display:none; margin-top:8px; padding:10px 12px; background:#2a1a0a; border:1px solid #3a2a0a; border-radius:6px; font-size:0.8rem; color:#e3b341;">
+                                <!-- Both selected: guideline says show only "Paid partnership" -->
+                                <div id="both-selected-notice" class="info-box info" style="display:none; margin-top:10px;">Your photo/video will be labeled as <strong style="color:#ccc;">&ldquo;Paid partnership&rdquo;</strong></div>
+                                <!-- Nothing selected warning -->
+                                <div id="commercial-none-warning" class="info-box warn" style="display:none; margin-top:8px;">
                                     You need to indicate if your content promotes yourself, a third party, or both.
                                 </div>
-                                <div id="commercial-privacy-warning" style="display:none; margin-top:8px; padding:10px 12px; background:#2a1a1a; border:1px solid #3a2a2a; border-radius:6px; font-size:0.8rem; color:#ffa198;"></div>
+                                <!-- Privacy conflict when branded content selected -->
+                                <div id="commercial-privacy-warning" class="info-box error" style="display:none; margin-top:8px;"></div>
                             </div>
                         </div>
 
-                        <!-- Legal Declaration (dynamic) -->
-                        <div class="legal-text" id="legal-declaration">
+                        <!-- AI-Generated Content Disclosure -->
+                        <hr class="section-divider">
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <div class="toggle-title">AI-generated content</div>
+                                <div class="toggle-desc">This video contains AI-generated content (voice, visuals, or script)</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="aigc-toggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- ── POINT 4: Legal Declaration (dynamic) ────────── -->
+                    <div class="app-card" style="padding: 20px 24px;">
+                        <div class="guideline-point" style="margin-bottom:10px;">Point 4 — Declaration</div>
+                        <div class="legal-text" id="legal-declaration" style="margin:0;">
                             By posting, you agree to TikTok's <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.
                         </div>
+                    </div>
 
-                        <!-- Post Button -->
+                    <!-- ── POINT 5: Content Preview + Post ────────────── -->
+                    <div class="app-card">
+                        <div class="guideline-point" style="margin-bottom:14px;">Point 5 — Preview &amp; User Consent</div>
+
+                        <!-- Video Preview (before posting) -->
+                        <div class="video-preview-label">Preview your video before posting</div>
+                        <div class="video-preview" id="video-upload-area">
+                            <div id="video-dropzone" onclick="document.getElementById('video-file').click()" style="cursor:pointer;">
+                                <div class="preview-thumb" id="preview-thumb-placeholder">
+                                    <span class="play-icon" style="font-size:2rem;">&#8679;</span>
+                                </div>
+                                <div class="preview-label">Click to select a video file (MP4)</div>
+                            </div>
+                            <video id="video-player" controls style="display:none; max-width:200px; max-height:356px; border-radius:10px; margin:0 auto 12px;"></video>
+                            <div id="video-info" class="preview-label" style="display:none;"></div>
+                            <input type="file" id="video-file" accept="video/mp4" style="display:none;" onchange="handleVideoSelect(event)">
+                        </div>
+
+                        <!-- Post Button (explicit user consent) -->
                         <button class="btn btn-tiktok" id="post-submit-btn" onclick="submitPost()" disabled style="opacity:0.5; cursor:not-allowed;">
                             <svg width="18" height="20" viewBox="0 0 20 22" fill="none"><path d="M14.67 0H11.08V15.02C11.08 16.69 9.72 18.05 8.04 18.05C6.36 18.05 5 16.69 5 15.02C5 13.38 6.33 12.05 7.95 12V8.43C4.39 8.48 1.5 11.4 1.5 15.02C1.5 18.67 4.45 21.59 8.08 21.59C11.71 21.59 14.67 18.64 14.67 15.02V7.3C16.04 8.3 17.72 8.88 19.5 8.91V5.34C16.83 5.24 14.67 2.86 14.67 0Z" fill="white"/></svg>
                             Post to TikTok
                         </button>
+
+                        <!-- Processing notice -->
+                        <div class="processing-notice" style="margin-top:14px;">
+                            <span class="notice-icon">&#8987;</span>
+                            <span class="notice-text">After posting, your video requires processing time before it appears on your profile. You will be notified once it is published. Post status is tracked via <code style="font-size:0.8em; color:#58a6ff;">publish/status/fetch</code> API.</span>
+                        </div>
                     </div>
                 </div>
 
@@ -716,7 +861,7 @@
                     </div>
                     <div class="processing-notice">
                         <span class="notice-icon">&#8987;</span>
-                        <span class="notice-text">Your video is being processed by TikTok. It may take a few minutes before it appears on your profile. You will receive a notification once it is published.</span>
+                        <span class="notice-text">Your video is being processed by TikTok. It may take a few minutes before it appears on your profile. Post status is polled via the <code style="font-size:0.8em; color:#58a6ff;">publish/status/fetch</code> API until PUBLISH_COMPLETE.</span>
                     </div>
                     <div style="text-align:center; margin-top:24px;">
                         <button class="btn btn-outline btn-sm" onclick="resetPostForm()">Post Another Video</button>
@@ -861,7 +1006,7 @@
             document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
             document.getElementById('page-' + page).classList.add('active');
             document.getElementById('nav-' + page).classList.add('active');
-            // Point 1: retrieve latest creator info when rendering the Post page
+            // Point 1: retrieve latest creator info every time the Post page is opened
             if (page === 'post') {
                 creatorInfo = null;
                 loadCreatorInfo();
@@ -878,7 +1023,6 @@
         function connectTikTok() {
             const state = generateState();
             sessionStorage.setItem('tiktok_oauth_state', state);
-
             const params = new URLSearchParams({
                 client_key: CLIENT_KEY,
                 response_type: 'code',
@@ -886,7 +1030,6 @@
                 redirect_uri: REDIRECT_URI,
                 state: state,
             });
-
             window.location.href = AUTH_URL + '?' + params.toString();
         }
 
@@ -898,7 +1041,6 @@
         function updateTikTokUI(connected) {
             const statusText = document.getElementById('tiktok-status-text');
             const connectArea = document.getElementById('tiktok-connect-area');
-
             if (connected) {
                 statusText.textContent = 'Connected — auto-publishing enabled';
                 connectArea.innerHTML = '<span class="status-badge connected">Connected</span> <button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="disconnectTikTok()">Disconnect</button>';
@@ -909,7 +1051,6 @@
         }
 
         function dismissAuth() {
-            // Clean URL
             window.history.replaceState({}, '', window.location.pathname);
             document.getElementById('auth-success').style.display = 'none';
             document.getElementById('auth-error').style.display = 'none';
@@ -924,78 +1065,89 @@
             const errorDesc = params.get('error_description');
 
             if (code) {
-                // Success: authorization code received
                 document.getElementById('dashboard-main').style.display = 'none';
                 document.getElementById('auth-success').style.display = 'block';
                 sessionStorage.setItem('tiktok_connected', 'true');
                 updateTikTokUI(true);
                 return;
             }
-
             if (error) {
-                // Error from TikTok
                 document.getElementById('dashboard-main').style.display = 'none';
                 document.getElementById('auth-error').style.display = 'block';
                 document.getElementById('auth-error-msg').textContent = errorDesc || error;
                 return;
             }
-
-            // No callback params — show normal dashboard
             if (sessionStorage.getItem('tiktok_connected') === 'true') {
                 updateTikTokUI(true);
             }
         }
 
-        // ─── Creator Info (Point 1) ──────────────────────
-        // Simulates fetching creator info from creator_info API.
-        // In production this calls: POST /v2/post/publish/creator_info/query/
+        // ─── Point 1: Creator Info ───────────────────────
+        // Calls POST /v2/post/publish/creator_info/query/ before rendering the form.
+        // Retrieves: nickname, privacy_level_options, interaction restrictions,
+        // can_post, max_video_post_duration_sec.
         let creatorInfo = null;
 
         function loadCreatorInfo() {
             const handleEl = document.getElementById('creator-handle');
-            const nameEl = document.getElementById('creator-name');
-            const postForm = document.getElementById('post-form-area');
-            const cannotPostEl = document.getElementById('creator-cannot-post');
+            const nameEl   = document.getElementById('creator-name');
+            const badgeEl  = document.getElementById('creator-api-badge');
+            const cannotPostEl  = document.getElementById('creator-cannot-post');
+            const metadataCard  = document.getElementById('post-metadata-card');
 
-            // Show loading state
-            handleEl.innerHTML = '<span class="loading-spinner"></span> Loading account info...';
-            nameEl.style.color = '#555';
-            nameEl.textContent = 'Fetching from TikTok API';
+            // Reset form to loading state
+            handleEl.innerHTML = '<span class="loading-spinner"></span> Loading account info\u2026';
+            nameEl.textContent  = 'Fetching from TikTok API\u2026';
+            nameEl.style.color  = '#555';
+            badgeEl.textContent = 'POST /creator_info/query/';
+            cannotPostEl.style.display  = 'none';
+            metadataCard.style.opacity = '0.4';
+            metadataCard.style.pointerEvents = 'none';
 
-            // Simulate API call to creator_info endpoint
+            // Reset privacy dropdown to empty while loading
+            const privacySelect = document.getElementById('post-privacy');
+            privacySelect.innerHTML = '<option value="" disabled selected>Loading from API\u2026</option>';
+
+            // Simulate API call (1.2s latency)
             setTimeout(function() {
-                // Simulated creator_info API response
+                // Simulated creator_info API response:
+                // privacy_level_options are returned by the API and populate the dropdown.
+                // comment_disabled / duet_disabled / stitch_disabled reflect account settings.
                 creatorInfo = {
-                    nickname: 'Ashen Tales',
+                    nickname:    'Ashen Tales',
                     display_name: '@joseantonioandrad530',
-                    can_post: true,
+                    can_post:    true,
                     max_video_post_duration_sec: 600,
                     privacy_level_options: ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'SELF_ONLY'],
                     comment_disabled: false,
-                    duet_disabled: false,
-                    stitch_disabled: false,
+                    duet_disabled:    false,
+                    stitch_disabled:  false,
                 };
+
+                badgeEl.textContent = '✓ creator_info loaded';
 
                 if (!creatorInfo.can_post) {
                     cannotPostEl.style.display = 'block';
-                    postForm.style.pointerEvents = 'none';
-                    postForm.style.opacity = '0.5';
+                    // Keep metadata disabled — user cannot post right now
                     return;
                 }
 
-                // Populate creator display
+                // Display creator account info
                 handleEl.textContent = creatorInfo.display_name;
-                nameEl.textContent = creatorInfo.nickname;
-                nameEl.style.color = '';
+                nameEl.textContent   = creatorInfo.nickname;
+                nameEl.style.color   = '';
 
-                // Populate privacy dropdown from API options
-                const privacySelect = document.getElementById('post-privacy');
-                privacySelect.innerHTML = '<option value="" disabled selected>Select privacy level</option>';
+                // Re-enable form
+                metadataCard.style.opacity = '1';
+                metadataCard.style.pointerEvents = '';
+
+                // Point 2: Populate privacy dropdown from API response only
                 const privacyLabels = {
-                    'PUBLIC_TO_EVERYONE': 'Public to Everyone',
+                    'PUBLIC_TO_EVERYONE':    'Public to Everyone',
                     'MUTUAL_FOLLOW_FRIENDS': 'Mutual Follow Friends',
-                    'SELF_ONLY': 'Self Only'
+                    'SELF_ONLY':             'Self Only (Only Me)',
                 };
+                privacySelect.innerHTML = '<option value="" disabled selected>Select privacy level\u2026</option>';
                 creatorInfo.privacy_level_options.forEach(function(level) {
                     const opt = document.createElement('option');
                     opt.value = level;
@@ -1003,34 +1155,197 @@
                     privacySelect.appendChild(opt);
                 });
 
-                // Apply creator_info interaction restrictions
+                // Apply account-level interaction restrictions from creator_info
                 applyCreatorInfoRestrictions();
 
+                // Refresh interaction status panel
+                updateInteractionStatus();
                 validateForm();
             }, 1200);
         }
 
+        // Point 2: Apply account-level restrictions returned by creator_info API.
+        // These are permanent (not affected by privacy selection).
         function applyCreatorInfoRestrictions() {
             if (!creatorInfo) return;
-
-            const duetCheckbox = document.getElementById('allow-duets');
-            const stitchCheckbox = document.getElementById('allow-stitches');
-            const labelDuets = document.getElementById('label-duets');
-            const labelStitches = document.getElementById('label-stitches');
+            const duetEl    = document.getElementById('allow-duets');
+            const stitchEl  = document.getElementById('allow-stitches');
+            const lblDuet   = document.getElementById('label-duets');
+            const lblStitch = document.getElementById('label-stitches');
 
             if (creatorInfo.duet_disabled) {
-                duetCheckbox.disabled = true;
-                duetCheckbox.checked = false;
-                labelDuets.classList.add('disabled-by-privacy');
+                duetEl.disabled = true;
+                duetEl.checked  = false;
+                lblDuet.classList.add('disabled-by-privacy');
             }
             if (creatorInfo.stitch_disabled) {
-                stitchCheckbox.disabled = true;
-                stitchCheckbox.checked = false;
-                labelStitches.classList.add('disabled-by-privacy');
+                stitchEl.disabled = true;
+                stitchEl.checked  = false;
+                lblStitch.classList.add('disabled-by-privacy');
             }
         }
 
-        // ─── Post Form ──────────────────────────────────
+        // ─── Privacy ↔ Interaction (Point 2) ────────────
+        // SELF_ONLY disables Duet and Stitch (not applicable to private videos).
+        // Account-level restrictions from creator_info are also respected.
+        function onPrivacyChange() {
+            updateInteractionBasedOnPrivacy();
+            updateCommercialState();
+            validateForm();
+        }
+
+        function updateInteractionBasedOnPrivacy() {
+            const privacy = document.getElementById('post-privacy').value;
+            const duetEl    = document.getElementById('allow-duets');
+            const stitchEl  = document.getElementById('allow-stitches');
+            const lblDuet   = document.getElementById('label-duets');
+            const lblStitch = document.getElementById('label-stitches');
+
+            const isSelfOnly       = (privacy === 'SELF_ONLY');
+            const creatorDuetOff   = creatorInfo && creatorInfo.duet_disabled;
+            const creatorStitchOff = creatorInfo && creatorInfo.stitch_disabled;
+
+            const duetDisabled   = isSelfOnly || creatorDuetOff;
+            const stitchDisabled = isSelfOnly || creatorStitchOff;
+
+            duetEl.disabled   = duetDisabled;
+            stitchEl.disabled = stitchDisabled;
+
+            if (duetDisabled)   { duetEl.checked = false;   lblDuet.classList.add('disabled-by-privacy'); }
+            else                {                            lblDuet.classList.remove('disabled-by-privacy'); }
+
+            if (stitchDisabled) { stitchEl.checked = false; lblStitch.classList.add('disabled-by-privacy'); }
+            else                {                            lblStitch.classList.remove('disabled-by-privacy'); }
+
+            updateInteractionStatus();
+        }
+
+        // Update the live interaction status panel
+        function updateInteractionStatus() {
+            const privacy = document.getElementById('post-privacy').value;
+            const isSelfOnly       = (privacy === 'SELF_ONLY');
+            const creatorDuetOff   = creatorInfo && creatorInfo.duet_disabled;
+            const creatorStitchOff = creatorInfo && creatorInfo.stitch_disabled;
+            const creatorCommOff   = creatorInfo && creatorInfo.comment_disabled;
+
+            function setRow(rowId, available, reason) {
+                const row  = document.getElementById(rowId);
+                const dot  = row.querySelector('.isr-dot');
+                const rsn  = row.querySelector('.isr-reason');
+                dot.className = 'isr-dot ' + (available ? 'on' : 'off');
+                rsn.textContent = reason;
+                rsn.style.color = available ? '#3fb950' : '#f85149';
+            }
+
+            // Comments
+            if (creatorCommOff)
+                setRow('isr-comments', false, 'Disabled by account settings');
+            else if (!privacy)
+                setRow('isr-comments', true, 'Select privacy to confirm');
+            else
+                setRow('isr-comments', true, 'Available');
+
+            // Duets
+            if (creatorDuetOff)
+                setRow('isr-duets', false, 'Disabled by account settings (creator_info)');
+            else if (isSelfOnly)
+                setRow('isr-duets', false, 'Not available for \u201cOnly Me\u201d privacy');
+            else if (!privacy)
+                setRow('isr-duets', true, 'Select privacy to confirm');
+            else
+                setRow('isr-duets', true, 'Available');
+
+            // Stitches
+            if (creatorStitchOff)
+                setRow('isr-stitches', false, 'Disabled by account settings (creator_info)');
+            else if (isSelfOnly)
+                setRow('isr-stitches', false, 'Not available for \u201cOnly Me\u201d privacy');
+            else if (!privacy)
+                setRow('isr-stitches', true, 'Select privacy to confirm');
+            else
+                setRow('isr-stitches', true, 'Available');
+        }
+
+        // ─── Point 3: Commercial Content ────────────────
+        function toggleCommercial() {
+            const sub    = document.getElementById('commercial-sub-options');
+            const toggle = document.getElementById('commercial-toggle');
+            sub.style.display = toggle.checked ? 'block' : 'none';
+            if (!toggle.checked) {
+                document.getElementById('your-brand').checked     = false;
+                document.getElementById('branded-content').checked = false;
+            }
+            updateCommercialState();
+        }
+
+        function updateCommercialState() {
+            const commercialOn    = document.getElementById('commercial-toggle').checked;
+            const yourBrand       = document.getElementById('your-brand').checked;
+            const brandedContent  = document.getElementById('branded-content').checked;
+            const privacySelect   = document.getElementById('post-privacy');
+            const yourBrandNotice = document.getElementById('your-brand-notice');
+            const bcNotice        = document.getElementById('branded-content-notice');
+            const bothNotice      = document.getElementById('both-selected-notice');
+            const noneWarn        = document.getElementById('commercial-none-warning');
+            const commercialPrivWarn = document.getElementById('commercial-privacy-warning');
+            const brandedPrivNote = document.getElementById('branded-privacy-note');
+            const legalEl         = document.getElementById('legal-declaration');
+
+            // Reset notices
+            yourBrandNotice.style.display = 'none';
+            bcNotice.style.display        = 'none';
+            bothNotice.style.display      = 'none';
+            noneWarn.style.display        = 'none';
+            commercialPrivWarn.style.display = 'none';
+            brandedPrivNote.style.display = 'none';
+
+            // Re-enable SELF_ONLY option by default
+            const selfOnlyOpt = privacySelect.querySelector('option[value="SELF_ONLY"]');
+            if (selfOnlyOpt) selfOnlyOpt.disabled = false;
+
+            if (commercialOn) {
+                if (yourBrand && brandedContent) {
+                    // Both selected: per guideline show only "Paid partnership" label
+                    bothNotice.style.display = 'block';
+                } else if (yourBrand) {
+                    yourBrandNotice.style.display = 'block';
+                } else if (brandedContent) {
+                    bcNotice.style.display = 'block';
+                } else {
+                    // Toggle on but nothing selected — show required warning
+                    noneWarn.style.display = 'block';
+                }
+
+                if (brandedContent) {
+                    // Branded Content requires Public or Friends visibility — disable "Only Me"
+                    if (selfOnlyOpt) selfOnlyOpt.disabled = true;
+                    brandedPrivNote.style.display = 'block';
+
+                    if (privacySelect.value === 'SELF_ONLY') {
+                        // Current selection conflicts — clear it and warn
+                        privacySelect.value = '';
+                        updateInteractionBasedOnPrivacy();
+                        commercialPrivWarn.textContent = '⚠ Privacy was reset: Branded Content cannot be "Only Me". Please select Public or Friends.';
+                        commercialPrivWarn.style.display = 'block';
+                        brandedPrivNote.style.display = 'none'; // avoid duplicate
+                    }
+                }
+
+                // Point 4: Legal declaration varies by commercial selection
+                if (brandedContent) {
+                    legalEl.innerHTML = 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/bc-policy" target="_blank">Branded Content Policy</a> and <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.';
+                } else {
+                    legalEl.innerHTML = 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.';
+                }
+            } else {
+                // Default legal text (Point 4, no commercial content)
+                legalEl.innerHTML = 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.';
+            }
+
+            validateForm();
+        }
+
+        // ─── Video Selection (Point 5: preview) ─────────
         let selectedVideoFile = null;
 
         function updateCharCount() {
@@ -1042,205 +1357,82 @@
         function handleVideoSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             if (!file.type.startsWith('video/')) {
                 alert('Please select a valid video file (MP4).');
                 return;
             }
-
             selectedVideoFile = file;
-            const player = document.getElementById('video-player');
-            const placeholder = document.getElementById('preview-thumb-placeholder');
-            const dropzone = document.getElementById('video-dropzone');
-            const infoEl = document.getElementById('video-info');
-
+            const player      = document.getElementById('video-player');
+            const dropzone    = document.getElementById('video-dropzone');
+            const infoEl      = document.getElementById('video-info');
             const url = URL.createObjectURL(file);
             player.src = url;
             player.style.display = 'block';
             dropzone.style.display = 'none';
             infoEl.style.display = 'block';
-
             player.onloadedmetadata = function() {
-                const dur = Math.floor(player.duration);
+                const dur  = Math.floor(player.duration);
                 const mins = Math.floor(dur / 60);
                 const secs = dur % 60;
-                const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-                infoEl.textContent = file.name + ' \u2014 ' + mins + ':' + String(secs).padStart(2, '0') + ' \u2014 ' + sizeMB + ' MB';
+                const mb   = (file.size / 1024 / 1024).toFixed(1);
+                infoEl.textContent = file.name + ' \u2014 ' + mins + ':' + String(secs).padStart(2,'0') + ' \u2014 ' + mb + ' MB';
                 validateForm();
             };
         }
 
-        function updateInteractionBasedOnPrivacy() {
-            const privacy = document.getElementById('post-privacy').value;
-            const duetCheckbox = document.getElementById('allow-duets');
-            const stitchCheckbox = document.getElementById('allow-stitches');
-            const labelDuets = document.getElementById('label-duets');
-            const labelStitches = document.getElementById('label-stitches');
-            const banner = document.getElementById('privacy-interaction-banner');
-
-            const isSelfOnly = privacy === 'SELF_ONLY';
-            // Also respect creator_info API restrictions
-            const creatorDuetDisabled = creatorInfo && creatorInfo.duet_disabled;
-            const creatorStitchDisabled = creatorInfo && creatorInfo.stitch_disabled;
-
-            const duetDisabled = isSelfOnly || creatorDuetDisabled;
-            const stitchDisabled = isSelfOnly || creatorStitchDisabled;
-
-            duetCheckbox.disabled = duetDisabled;
-            stitchCheckbox.disabled = stitchDisabled;
-
-            if (duetDisabled) {
-                duetCheckbox.checked = false;
-                labelDuets.classList.add('disabled-by-privacy');
-            } else {
-                labelDuets.classList.remove('disabled-by-privacy');
-            }
-
-            if (stitchDisabled) {
-                stitchCheckbox.checked = false;
-                labelStitches.classList.add('disabled-by-privacy');
-            } else {
-                labelStitches.classList.remove('disabled-by-privacy');
-            }
-
-            // Show explanation banner for SELF_ONLY privacy restriction
-            if (isSelfOnly) {
-                banner.style.display = 'block';
-            } else if (creatorDuetDisabled || creatorStitchDisabled) {
-                banner.innerHTML = '<strong>Account restriction:</strong> Some interactions have been disabled based on your TikTok account settings.';
-                banner.style.display = 'block';
-            } else {
-                banner.style.display = 'none';
-            }
-        }
-
-        function toggleCommercial() {
-            const sub = document.getElementById('commercial-sub-options');
-            const toggle = document.getElementById('commercial-toggle');
-            sub.style.display = toggle.checked ? 'block' : 'none';
-            if (!toggle.checked) {
-                document.getElementById('your-brand').checked = false;
-                document.getElementById('branded-content').checked = false;
-            }
-            updateCommercialState();
-        }
-
-        function updateCommercialState() {
-            const commercialOn = document.getElementById('commercial-toggle').checked;
-            const yourBrand = document.getElementById('your-brand').checked;
-            const brandedContent = document.getElementById('branded-content').checked;
-            const privacySelect = document.getElementById('post-privacy');
-            const selfOnlyOption = privacySelect.querySelector('option[value="SELF_ONLY"]');
-            const yourBrandNotice = document.getElementById('your-brand-notice');
-            const brandedContentNotice = document.getElementById('branded-content-notice');
-            const privacyWarning = document.getElementById('commercial-privacy-warning');
-            const legalEl = document.getElementById('legal-declaration');
-
-            const bothSelectedNotice = document.getElementById('both-selected-notice');
-            const noneWarning = document.getElementById('commercial-none-warning');
-
-            // Reset
-            yourBrandNotice.style.display = 'none';
-            brandedContentNotice.style.display = 'none';
-            bothSelectedNotice.style.display = 'none';
-            noneWarning.style.display = 'none';
-            privacyWarning.style.display = 'none';
-            if (selfOnlyOption) selfOnlyOption.disabled = false;
-
-            if (commercialOn) {
-                if (yourBrand && brandedContent) {
-                    // Both selected: per guideline, show only "Paid partnership"
-                    bothSelectedNotice.style.display = 'block';
-                } else if (yourBrand) {
-                    yourBrandNotice.style.display = 'block';
-                } else if (brandedContent) {
-                    brandedContentNotice.style.display = 'block';
-                } else {
-                    // Nothing selected: show the required warning message
-                    noneWarning.style.display = 'block';
-                }
-
-                // Branded content cannot be SELF_ONLY
-                if (brandedContent) {
-                    if (selfOnlyOption) selfOnlyOption.disabled = true;
-                    if (privacySelect.value === 'SELF_ONLY') {
-                        privacySelect.value = '';
-                        updateInteractionBasedOnPrivacy();
-                        privacyWarning.textContent = 'Branded content cannot be set to "Self Only". Please select a different privacy level.';
-                        privacyWarning.style.display = 'block';
-                    }
-                }
-
-                // Update legal text based on selections (Point 4)
-                if (brandedContent) {
-                    legalEl.innerHTML = 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/bc-policy" target="_blank">Branded Content Policy</a> and <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.';
-                } else {
-                    legalEl.innerHTML = 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.';
-                }
-            } else {
-                // Default legal text (Point 4)
-                legalEl.innerHTML = 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/music-usage-confirmation" target="_blank">Music Usage Confirmation</a>.';
-            }
-
-            validateForm();
-        }
-
+        // ─── Form Validation ─────────────────────────────
         function validateForm() {
-            const btn = document.getElementById('post-submit-btn');
-            const title = document.getElementById('post-title').value.trim();
-            const privacy = document.getElementById('post-privacy').value;
-            const commercialOn = document.getElementById('commercial-toggle').checked;
-            const yourBrand = document.getElementById('your-brand').checked;
+            const btn           = document.getElementById('post-submit-btn');
+            const title         = document.getElementById('post-title').value.trim();
+            const privacy       = document.getElementById('post-privacy').value;
+            const commercialOn  = document.getElementById('commercial-toggle').checked;
+            const yourBrand     = document.getElementById('your-brand').checked;
             const brandedContent = document.getElementById('branded-content').checked;
 
             let valid = true;
-
             if (!selectedVideoFile) valid = false;
-            if (!title) valid = false;
-            if (!privacy) valid = false;
-
-            // If commercial toggle is on, at least one sub-option must be selected
+            if (!title)             valid = false;
+            if (!privacy)           valid = false;
+            // Commercial toggle on but nothing selected → disabled
             if (commercialOn && !yourBrand && !brandedContent) valid = false;
 
-            btn.disabled = !valid;
+            btn.disabled      = !valid;
             btn.style.opacity = valid ? '1' : '0.5';
-            btn.style.cursor = valid ? 'pointer' : 'not-allowed';
+            btn.style.cursor  = valid ? 'pointer' : 'not-allowed';
         }
 
+        // ─── Submit (Point 5: explicit user consent) ─────
         function submitPost() {
             const btn = document.getElementById('post-submit-btn');
             if (btn.disabled) return;
 
-            const title = document.getElementById('post-title').value.trim();
-            const privacy = document.getElementById('post-privacy').value;
-            const commercialOn = document.getElementById('commercial-toggle').checked;
-            const yourBrand = document.getElementById('your-brand').checked;
+            const title         = document.getElementById('post-title').value.trim();
+            const privacy       = document.getElementById('post-privacy').value;
+            const commercialOn  = document.getElementById('commercial-toggle').checked;
+            const yourBrand     = document.getElementById('your-brand').checked;
             const brandedContent = document.getElementById('branded-content').checked;
+            const aigc          = document.getElementById('aigc-toggle').checked;
 
-            // Final validations
             if (!selectedVideoFile) { alert('Please select a video file.'); return; }
-            if (!title) { alert('Please enter a title for your video.'); return; }
-            if (!privacy) { alert('Please select a privacy level.'); return; }
+            if (!title)             { alert('Please enter a title.'); return; }
+            if (!privacy)           { alert('Please select a privacy level.'); return; }
             if (commercialOn && !yourBrand && !brandedContent) {
-                alert('Please select at least one commercial content option (Your Brand or Branded Content).');
+                alert('Please select at least one commercial content option.');
                 return;
             }
 
-            // Build post summary
-            const aigc = document.getElementById('aigc-toggle').checked;
             const postData = {
-                title: title,
-                privacy_level: privacy,
-                disable_comment: !document.getElementById('allow-comments').checked,
-                disable_duet: !document.getElementById('allow-duets').checked,
-                disable_stitch: !document.getElementById('allow-stitches').checked,
-                is_aigc: aigc,
-                brand_organic_toggle: commercialOn && yourBrand,
-                brand_content_toggle: commercialOn && brandedContent,
+                title:             title,
+                privacy_level:     privacy,
+                disable_comment:   !document.getElementById('allow-comments').checked,
+                disable_duet:      !document.getElementById('allow-duets').checked,
+                disable_stitch:    !document.getElementById('allow-stitches').checked,
+                is_aigc:           aigc,
+                brand_organic_toggle:  commercialOn && yourBrand,
+                brand_content_toggle:  commercialOn && brandedContent,
                 video_file: selectedVideoFile.name,
                 video_size: selectedVideoFile.size,
             };
-
             console.log('[TikTok Post] Submitting with params:', postData);
 
             document.getElementById('post-form-area').style.display = 'none';
@@ -1250,24 +1442,24 @@
         function resetPostForm() {
             selectedVideoFile = null;
             document.getElementById('post-form-area').style.display = 'block';
-            document.getElementById('post-success').style.display = 'none';
-            document.getElementById('post-privacy').selectedIndex = 0;
+            document.getElementById('post-success').style.display  = 'none';
+            document.getElementById('post-privacy').value   = '';
             document.getElementById('allow-comments').checked = false;
-            document.getElementById('allow-duets').checked = false;
+            document.getElementById('allow-duets').checked    = false;
             document.getElementById('allow-stitches').checked = false;
-            document.getElementById('aigc-toggle').checked = true;
+            document.getElementById('aigc-toggle').checked    = true;
             document.getElementById('commercial-toggle').checked = false;
             document.getElementById('video-file').value = '';
             document.getElementById('video-player').style.display = 'none';
             document.getElementById('video-player').src = '';
             document.getElementById('video-dropzone').style.display = 'block';
-            document.getElementById('video-info').style.display = 'none';
-            document.getElementById('your-brand-notice').style.display = 'none';
-            document.getElementById('branded-content-notice').style.display = 'none';
-            document.getElementById('both-selected-notice').style.display = 'none';
-            document.getElementById('commercial-none-warning').style.display = 'none';
-            document.getElementById('privacy-interaction-banner').style.display = 'none';
-            document.getElementById('creator-cannot-post').style.display = 'none';
+            document.getElementById('video-info').style.display    = 'none';
+            document.getElementById('your-brand-notice').style.display         = 'none';
+            document.getElementById('branded-content-notice').style.display    = 'none';
+            document.getElementById('both-selected-notice').style.display      = 'none';
+            document.getElementById('commercial-none-warning').style.display   = 'none';
+            document.getElementById('branded-privacy-note').style.display      = 'none';
+            document.getElementById('creator-cannot-post').style.display       = 'none';
             toggleCommercial();
             updateInteractionBasedOnPrivacy();
             validateForm();
@@ -1276,12 +1468,8 @@
         // ─── Init ────────────────────────────────────────
         handleCallback();
         updateCharCount();
-        document.getElementById('post-privacy').addEventListener('change', function() {
-            updateInteractionBasedOnPrivacy();
-            updateCommercialState();
-            validateForm();
-        });
-        // If page loads directly on the post tab, load creator info
+
+        // If the Post page is active on load, kick off creator_info fetch
         if (document.getElementById('page-post').classList.contains('active')) {
             loadCreatorInfo();
         }
