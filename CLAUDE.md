@@ -1,50 +1,95 @@
-# Viral Pipeline - Project Context
+# Viral Pipeline
+
+> Automated short-form content engine: scrape, narrate, compile, publish.
 
 ## Server
-- **Host:** `viral-pipeline` (SSH alias) or `ssh ubuntu@149.130.186.177`
-- **Platform:** Oracle Cloud Free Tier, ARM (aarch64), Ubuntu 22.04
-- **Pipeline path:** `/home/ubuntu/pipeline/`
-- **Scripts:** `/home/ubuntu/pipeline/scripts/`
-- **n8n:** Docker container, ports 5678
-- **Env vars:** `/home/ubuntu/pipeline/.env`
+
+| | |
+|---|---|
+| **SSH** | `viral-pipeline` (alias) or `ssh ubuntu@149.130.186.177` |
+| **Platform** | Oracle Cloud Free Tier, ARM (aarch64), Ubuntu 22.04 |
+| **Pipeline** | `/home/ubuntu/pipeline/` |
+| **Scripts** | `/home/ubuntu/pipeline/scripts/` |
+| **Env file** | `/home/ubuntu/pipeline/.env` |
+| **n8n** | Docker container, port 5678 |
+
+## Pipeline Flow
+
+```
+n8n (Docker, schedule) ──▶ pipeline.py ──▶ manifest.json
+                                              │
+Cron watchers (host, */5) ────────────────────┘
+  ├── tiktok_watcher.sh ──▶ TikTok Content Posting API
+  ├── instagram_watcher.sh ──▶ Instagram Graph API v21.0
+  └── YouTube ──▶ via n8n OAuth2 node (no watcher)
+```
+
+**Schedule:** 7:00 AM + 4:00 PM Colombia time, 3 shorts per run (6/day).
+
+## Key Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `pipeline.py` | Master orchestrator — scrape, download, narrate, compile, output manifest |
+| `scrape_viral.py` | Finds trending clips (YouTube, Reddit via yt-dlp) |
+| `download_clips.py` | Downloads raw video clips |
+| `generate_narration.py` | Groq API (Llama 3.3 70B) for script + Edge TTS for voice |
+| `compile_video.py` | FFmpeg assembly — long video + vertical shorts |
+| `upload_tiktok.py` | TikTok upload + token management (`--auth`, `--refresh`) |
+| `upload_instagram.py` | Instagram Reels upload (`--auth`, `--refresh`) |
+| `tiktok_watcher.sh` | Cron watcher — polls for `tiktok_manifest.json` |
+| `instagram_watcher.sh` | Cron watcher — polls for `instagram_manifest.json` |
 
 ## TikTok Integration
+
 - **Production Client Key:** `awxtj46z4b0gfvsg`
 - **Production Client Secret:** `adyCTCYdnm7BeG8lIcOqia01IqeHpTxQ`
 - **Sandbox Client Key:** `sbawxa5zsa7ap3bt7l`
 - **Redirect URI:** `https://avarajar.github.io/viral-shorts/`
-- **TikTok upload:** Runs via cron (`tiktok_watcher.sh`) every 5 min on host, NOT inside Docker
 - **Tokens file:** `/home/ubuntu/pipeline/scripts/tiktok_tokens.json`
+- **Runs via cron on the host, NOT inside Docker**
+- Access tokens auto-refresh 5 min before expiry; 401s trigger automatic retry with refresh
+- First-time auth: `python3 upload_tiktok.py --auth`
 
 ## Instagram Reels Integration
-- **Upload:** Runs via cron (`instagram_watcher.sh`) every 5 min on host, NOT inside Docker
-- **Tokens file:** `/home/ubuntu/pipeline/scripts/instagram_tokens.json`
-- **API:** Instagram Graph API v21.0 (Content Publishing)
-- **Video serving:** nginx serves `/pipeline/output/shorts/` at `http://149.130.186.177/shorts/`
-- **Nginx config:** `config/nginx-shorts.conf` → deploy to `/etc/nginx/sites-enabled/`
-- **Env vars needed:**
-  - `INSTAGRAM_APP_ID` — Facebook App ID
-  - `INSTAGRAM_APP_SECRET` — Facebook App Secret
-  - `INSTAGRAM_ACCESS_TOKEN` — Long-lived token (60 days, refresh with `--refresh`)
-  - `INSTAGRAM_USER_ID` — IG Business account ID (obtained during `--auth`)
-  - `INSTAGRAM_VIDEO_BASE_URL` — defaults to `http://149.130.186.177/shorts`
-- **First-time auth:** `python3 upload_instagram.py --auth` (needs short-lived token from Graph Explorer)
-- **Cron:** `*/5 * * * * /home/ubuntu/pipeline/scripts/instagram_watcher.sh >> /home/ubuntu/pipeline/instagram_upload.log 2>&1`
 
-## GitHub
-- **Repo:** https://github.com/avarajar/viral-shorts
-- **GitHub Pages:** https://avarajar.github.io/viral-shorts/
+- **API:** Instagram Graph API v21.0 (Content Publishing)
+- **Tokens file:** `/home/ubuntu/pipeline/scripts/instagram_tokens.json`
+- **Video serving:** nginx serves `/pipeline/output/shorts/` at `http://149.130.186.177/shorts/`
+- **Nginx config:** `config/nginx-shorts.conf` → `/etc/nginx/sites-enabled/`
+- **Runs via cron on the host, NOT inside Docker**
+- Long-lived tokens last 60 days; refresh with `--refresh`
+- First-time auth: `python3 upload_instagram.py --auth` (needs short-lived token from Graph Explorer)
+- Env vars: `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`, `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_USER_ID`, `INSTAGRAM_VIDEO_BASE_URL`
 
 ## YouTube
-- **Channel:** https://www.youtube.com/channel/UCMvzfQUpxbx9SvztFdGJixg
-- **Upload:** Via n8n YouTube node (OAuth2 inside n8n)
 
-## Schedule
-- n8n runs pipeline twice daily: 7:00 AM and 4:00 PM (Colombia time)
-- Generates 3 shorts per run (6 per day)
+- **Channel:** `UCMvzfQUpxbx9SvztFdGJixg`
+- **Upload:** Handled by n8n YouTube node (OAuth2 managed inside n8n)
 
-## Deploy
-- To deploy code changes to server: `scp scripts/*.py viral-pipeline:/home/ubuntu/pipeline/scripts/`
-- Deploy shell scripts: `scp scripts/*.sh viral-pipeline:/home/ubuntu/pipeline/scripts/`
-- Deploy nginx config: `scp config/nginx-shorts.conf viral-pipeline:/tmp/ && ssh viral-pipeline "sudo cp /tmp/nginx-shorts.conf /etc/nginx/sites-enabled/shorts.conf && sudo nginx -t && sudo systemctl reload nginx"`
-- Or: `ssh viral-pipeline` then git pull from repo
+## GitHub & Deploy
+
+- **Repo:** https://github.com/avarajar/viral-shorts
+- **GitHub Pages:** https://avarajar.github.io/viral-shorts/ (TikTok OAuth redirect page)
+- **CI/CD:** GitHub Actions auto-deploys on push to `main` (only changed components)
+
+### Manual Deploy
+
+```bash
+# Scripts
+scp scripts/*.py scripts/*.sh viral-pipeline:/home/ubuntu/pipeline/scripts/
+
+# Nginx
+scp config/nginx-shorts.conf viral-pipeline:/tmp/ && \
+  ssh viral-pipeline "sudo cp /tmp/nginx-shorts.conf /etc/nginx/sites-enabled/shorts.conf && sudo nginx -t && sudo systemctl reload nginx"
+```
+
+## Conventions
+
+- All Python scripts use only stdlib (`urllib`, `json`, `subprocess`) — no `requests` or heavy deps
+- FFmpeg and yt-dlp are the external workhorses
+- AI: Groq free tier with Llama 3.3 70B for script generation
+- TTS: Microsoft Edge TTS (free, no API key needed)
+- Docker paths start with `/pipeline/` — map to `/home/ubuntu/pipeline/` on host
+- Token files (`.json`) are gitignored — never commit secrets
+- Logs: `tiktok_upload.log`, `instagram_upload.log` in pipeline root
