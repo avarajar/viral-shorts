@@ -95,8 +95,9 @@ def get_access_token():
     if tokens is None:
         print("  [auth] No tokens. Run: python3 upload_tiktok.py --auth", file=sys.stderr)
         sys.exit(1)
-    if time.time() > tokens.get("expires_at", 0):
-        print("  [auth] Access token expired, refreshing...", file=sys.stderr)
+    # Refresh 5 minutes early to avoid race between check and API call
+    if time.time() > tokens.get("expires_at", 0) - 300:
+        print("  [auth] Access token expired (or expiring soon), refreshing...", file=sys.stderr)
         tokens = refresh_token(tokens["refresh_token"])
     return tokens["access_token"]
 
@@ -159,7 +160,7 @@ def run_auth_flow():
 
 # ─── TikTok API ──────────────────────────────────────────────────────
 
-def _api(method, path, access_token, body=None):
+def _api(method, path, access_token, body=None, _retried=False):
     url = f"{BASE_URL}{path}"
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -173,6 +174,13 @@ def _api(method, path, access_token, body=None):
     except urllib.error.HTTPError as e:
         err = e.read().decode("utf-8")
         print(f"  [API] HTTP {e.code}: {err}", file=sys.stderr)
+        # On 401, try refreshing token once and retry
+        if e.code == 401 and not _retried:
+            print("  [API] Token invalid, attempting refresh and retry...", file=sys.stderr)
+            tokens = load_tokens()
+            if tokens and tokens.get("refresh_token"):
+                new_tokens = refresh_token(tokens["refresh_token"])
+                return _api(method, path, new_tokens["access_token"], body, _retried=True)
         raise RuntimeError(f"API error {e.code}: {err}")
 
 
