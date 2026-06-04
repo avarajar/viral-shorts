@@ -1,0 +1,16 @@
+# Viral Pipeline — host crontab (NOT inside Docker)
+# Install/update with:  crontab config/crontab.host   (or merge entries by hand)
+# These run as the `ubuntu` user on the server (alias: viral-pipeline).
+#
+# NOTE: token files live at scripts/*_tokens.json and are gitignored.
+
+# ── Upload watchers: poll every 5 min for a pending manifest ──────────────────
+*/5 * * * * /home/ubuntu/pipeline/scripts/instagram_watcher.sh >> /home/ubuntu/pipeline/instagram_upload.log 2>&1
+*/5 * * * * /home/ubuntu/pipeline/scripts/tiktok_watcher.sh >> /home/ubuntu/pipeline/tiktok_upload.log 2>&1
+
+# ── Instagram long-lived token refresh ───────────────────────────────────────
+# REQUIRED. IG long-lived tokens expire after 60 days and do not renew on their
+# own. This refreshes well inside that window (every 50 days). Without it the
+# account silently stops posting once the token expires.
+# (TikTok refreshes itself inside upload_tiktok.py, so it needs no cron here.)
+0 11 */50 * * /usr/bin/python3 /home/ubuntu/pipeline/scripts/upload_instagram.py --refresh >> /home/ubuntu/pipeline/logs/token_refresh.log 2>&1
