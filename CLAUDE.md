@@ -58,8 +58,15 @@ Cron watchers (host, */5) ──────────────────
 - **Video serving:** nginx serves `/pipeline/output/shorts/` at `http://149.130.186.177/shorts/`
 - **Nginx config:** `config/nginx-shorts.conf` → `/etc/nginx/sites-enabled/`
 - **Runs via cron on the host, NOT inside Docker**
-- Long-lived tokens last 60 days; refresh with `--refresh`
-- First-time auth: `python3 upload_instagram.py --auth` (needs short-lived token from Graph Explorer)
+- Long-lived tokens last **exactly 60 days** and do NOT auto-renew on their own — a
+  refresh cron MUST exist or the account silently stops posting once the token expires.
+  The refresh cron is versioned in `config/crontab.host` (`upload_instagram.py --refresh`
+  every 50 days). **Without it the token dies after 60 days** (this is what took the
+  account offline Apr–Jun 2026).
+- First-time / recovery auth: `python3 upload_instagram.py --auth [TOKEN]`. Paste the token
+  from the Meta dashboard (**App → Instagram → API setup → Generate token**). `--auth`
+  auto-detects whether the token is short-lived (OAuth redirect → `ig_exchange_token`) or
+  already long-lived (dashboard button → `ig_refresh_token`) and handles both.
 - Env vars: `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`, `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_USER_ID`, `INSTAGRAM_VIDEO_BASE_URL`
 
 ## YouTube
@@ -82,6 +89,11 @@ scp scripts/*.py scripts/*.sh viral-pipeline:/home/ubuntu/pipeline/scripts/
 # Nginx
 scp config/nginx-shorts.conf viral-pipeline:/tmp/ && \
   ssh viral-pipeline "sudo cp /tmp/nginx-shorts.conf /etc/nginx/sites-enabled/shorts.conf && sudo nginx -t && sudo systemctl reload nginx"
+
+# Crontab (watchers + Instagram token refresh) — review before installing,
+# the host crontab may contain entries for other projects (e.g. kanjeo).
+scp config/crontab.host viral-pipeline:/tmp/ && \
+  ssh viral-pipeline "crontab -l"   # then merge /tmp/crontab.host entries manually
 ```
 
 ## Conventions

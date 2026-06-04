@@ -140,8 +140,33 @@ def get_instagram_user_id(access_token):
     return user_id
 
 
+def resolve_long_lived_token(token):
+    """Turn a pasted token into a long-lived one.
+
+    Meta hands out two kinds of token that both look the same:
+      - Short-lived tokens from the OAuth redirect flow -> ig_exchange_token.
+      - Long-lived tokens from the dashboard "Generate token" button, which
+        are already valid for 60 days -> ig_exchange_token rejects these with
+        "session key invalid", so they must go through ig_refresh_token instead.
+    Try the exchange first; if it fails, fall back to a refresh.
+    """
+    try:
+        print("  [auth] Trying short-lived exchange (ig_exchange_token)...", file=sys.stderr)
+        return get_long_lived_token(token)
+    except (urllib.error.HTTPError, RuntimeError) as exchange_err:
+        print(f"  [auth] Exchange rejected ({exchange_err}); token may already be "
+              f"long-lived, trying refresh...", file=sys.stderr)
+        try:
+            return refresh_long_lived_token(token)
+        except (urllib.error.HTTPError, RuntimeError) as refresh_err:
+            raise RuntimeError(
+                f"Token is neither a valid short-lived token (exchange: {exchange_err}) "
+                f"nor a refreshable long-lived token (refresh: {refresh_err})."
+            )
+
+
 def run_auth_flow(token_arg=None):
-    """Auth flow: exchange short-lived token for long-lived one."""
+    """Auth flow: turn a pasted token (short- or long-lived) into a stored long-lived one."""
     print("\n" + "=" * 60, file=sys.stderr)
     print("  INSTAGRAM AUTHORIZATION", file=sys.stderr)
     print("=" * 60, file=sys.stderr)
@@ -158,9 +183,8 @@ def run_auth_flow(token_arg=None):
         print("  [ERR] No token provided", file=sys.stderr)
         sys.exit(1)
 
-    # Exchange for long-lived token
-    print("  [auth] Exchanging for long-lived token...", file=sys.stderr)
-    long_lived = get_long_lived_token(short_token)
+    # Resolve to a long-lived token (handles both short- and long-lived input)
+    long_lived = resolve_long_lived_token(short_token)
     access_token = long_lived["access_token"]
 
     # Get IG user ID
