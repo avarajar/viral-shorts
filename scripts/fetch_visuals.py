@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-Generate AI images for each story segment using HuggingFace FLUX (free).
+Generate AI images for each story segment.
+Provider chain: Cloudflare Workers AI (FLUX.2 klein / FLUX.1 schnell) ->
+HuggingFace Inference (SD3 medium) -> Pollinations.
 Creates Ken Burns effect (slow zoom/pan) on each image for engaging visuals.
 Falls back to Pexels stock footage if image generation fails.
 """
@@ -11,8 +13,10 @@ import subprocess
 import sys
 import urllib.request
 import urllib.parse
+import urllib.error
 import time
 import random
+import base64
 
 VISUALS_DIR = "/pipeline/visuals"
 TARGET_WIDTH = 1080
@@ -21,27 +25,50 @@ FPS = 30
 
 POLLINATIONS_API_KEY = os.environ.get("POLLINATIONS_API_KEY", "")
 
-# HuggingFace FLUX - high quality AI image generation
-HF_API_URL = "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell"
+# Cloudflare Workers AI - primary provider (free tier: 10,000 neurons/day)
+CF_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+CF_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+# klein-4b renders native vertical at ~160 neurons/image (832x1472 = 6 output
+# tiles) but only speaks multipart/form-data; schnell only does 1024x1024
+# (~100 neurons, JSON) and survives as fallback.
+CF_MODELS = [
+    ("@cf/black-forest-labs/flux-2-klein-4b", {"width": 832, "height": 1472}, True),
+    ("@cf/black-forest-labs/flux-1-schnell", {"steps": 8}, False),
+]
+
+# HuggingFace router - hf-inference dropped FLUX.1-schnell (HTTP 410, Jul 2026);
+# SD3-medium is the text-to-image model still served on the free-credit provider
+HF_MODEL = "stabilityai/stable-diffusion-3-medium-diffusers"
+HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
 
 # Pexels as fallback
 PEXELS_API_URL = "https://api.pexels.com/videos/search"
 
 
 def generate_ai_image(prompt: str, output_path: str, hf_token: str = "") -> bool:
-    """Generate an AI image. HuggingFace FLUX first (best quality), Pollinations fallback."""
+    """Generate an AI image. Cloudflare Workers AI first, then HuggingFace, then Pollinations."""
+    styled = f"{prompt}, photorealistic, 8K, cinematic photography, shallow depth of field"
 
-    # Method 1: HuggingFace FLUX (best quality, handles faces well)
+    # Method 1: Cloudflare Workers AI (free 10k neurons/day, handles faces well)
+    if CF_ACCOUNT_ID and CF_API_TOKEN:
+        for model, extra, multipart in CF_MODELS:
+            if _generate_cloudflare(model, extra, multipart, styled, output_path):
+                return True
+        print("    [INFO] Cloudflare failed, falling back to HuggingFace", file=sys.stderr)
+
+    # Method 2: HuggingFace SD3 medium (limited free monthly credits)
     if hf_token:
-        hf_prompt = f"{prompt}, photorealistic, 8K, cinematic photography, shallow depth of field"
-        if _generate_flux(hf_prompt, output_path, hf_token):
+        if _generate_hf(styled, output_path, hf_token):
             return True
         print("    [INFO] HF failed, falling back to Pollinations", file=sys.stderr)
 
-    # Method 2: Pollinations (free fallback - avoid faces, use environmental style)
+    # Method 3: Pollinations (needs pollen balance - avoid faces, use environmental style)
     poll_prompt = _to_environmental(prompt)
     enhanced = f"{poll_prompt}, professional photography, cinematic color grading, bokeh background, shallow depth of field"
-    return _generate_pollinations(enhanced, output_path)
+    if _generate_pollinations(enhanced, output_path):
+        _fit_vertical(output_path)
+        return True
+    return False
 
 
 def _to_environmental(prompt: str) -> str:
@@ -117,26 +144,102 @@ def _generate_pollinations(prompt: str, output_path: str) -> bool:
         return False
 
 
-def _generate_flux(prompt: str, output_path: str, hf_token: str) -> bool:
-    """Generate image via HuggingFace FLUX (fallback)."""
-    body = json.dumps({"inputs": prompt}).encode()
+def _generate_cloudflare(model: str, extra: dict, multipart: bool,
+                         prompt: str, output_path: str) -> bool:
+    """Generate image via Cloudflare Workers AI. Response is JSON with base64 image."""
+    url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/{model}"
+    fields = {"prompt": prompt[:2040]}
+    fields.update(extra)
+    if multipart:
+        boundary = f"----viralpipeline{random.randint(10**12, 10**13)}"
+        body = "".join(
+            f"--{boundary}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n"
+            for k, v in fields.items()
+        ).encode() + f"--{boundary}--\r\n".encode()
+        content_type = f"multipart/form-data; boundary={boundary}"
+    else:
+        body = json.dumps(fields).encode()
+        content_type = "application/json"
     try:
-        req = urllib.request.Request(HF_API_URL, data=body, headers={
-            "Authorization": f"Bearer {hf_token}",
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 Chrome/120.0.0.0",
+        req = urllib.request.Request(url, data=body, headers={
+            "Authorization": f"Bearer {CF_API_TOKEN}",
+            "Content-Type": content_type,
         })
         with urllib.request.urlopen(req, timeout=120) as resp:
-            with open(output_path, "wb") as f:
-                while True:
-                    chunk = resp.read(65536)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-        return os.path.exists(output_path) and os.path.getsize(output_path) > 5000
+            data = json.loads(resp.read().decode())
+        image_b64 = (data.get("result") or {}).get("image", "")
+        if not image_b64:
+            print(f"    [WARN] Cloudflare {model} returned no image: {data.get('errors')}",
+                  file=sys.stderr)
+            return False
+        raw = base64.b64decode(image_b64)
+        if len(raw) < 5000:
+            return False
+        with open(output_path, "wb") as f:
+            f.write(raw)
+        _fit_vertical(output_path)
+        return True
     except Exception as e:
-        print(f"    [WARN] FLUX failed: {e}", file=sys.stderr)
+        print(f"    [WARN] Cloudflare {model} failed: {e}", file=sys.stderr)
         return False
+
+
+def _generate_hf(prompt: str, output_path: str, hf_token: str) -> bool:
+    """Generate image via HuggingFace Inference Providers router (SD3 medium)."""
+    # First try with vertical dimensions; some providers reject size params,
+    # so retry once without them before giving up.
+    for parameters in ({"width": 832, "height": 1472}, None):
+        body = {"inputs": prompt}
+        if parameters:
+            body["parameters"] = parameters
+        try:
+            req = urllib.request.Request(HF_API_URL, data=json.dumps(body).encode(), headers={
+                "Authorization": f"Bearer {hf_token}",
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 Chrome/120.0.0.0",
+            })
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                with open(output_path, "wb") as f:
+                    while True:
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 5000:
+                _fit_vertical(output_path)
+                return True
+            return False
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 415, 422) and parameters:
+                continue
+            print(f"    [WARN] HF {HF_MODEL} failed: {e}", file=sys.stderr)
+            return False
+        except Exception as e:
+            print(f"    [WARN] HF {HF_MODEL} failed: {e}", file=sys.stderr)
+            return False
+    return False
+
+
+def _fit_vertical(image_path: str):
+    """Scale + center-crop an image to exactly TARGET_WIDTHxTARGET_HEIGHT."""
+    tmp_path = f"{image_path}.fit.jpg"
+    cmd = [
+        "ffmpeg", "-y", "-i", image_path,
+        "-vf", (
+            f"scale={TARGET_WIDTH}:{TARGET_HEIGHT}:force_original_aspect_ratio=increase,"
+            f"crop={TARGET_WIDTH}:{TARGET_HEIGHT}"
+        ),
+        "-q:v", "2", "-frames:v", "1",
+        tmp_path,
+    ]
+    try:
+        subprocess.run(cmd, capture_output=True, timeout=60, check=True)
+        os.replace(tmp_path, image_path)
+    except Exception:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
 
 
 def create_ken_burns(image_path: str, output_path: str, duration: float,
@@ -249,8 +352,8 @@ def fetch_visuals_for_segments(segments: list, output_dir: str,
 
         got_visual = False
 
-        # Method 1: AI-generated image with Ken Burns effect (HuggingFace FLUX)
-        if keywords and hf_token:
+        # Method 1: AI-generated image with Ken Burns effect
+        if keywords:
             image_prompt = " ".join(keywords[:3])
             if narration:
                 # Use first sentence of narration for context
@@ -266,7 +369,7 @@ def fetch_visuals_for_segments(segments: list, output_dir: str,
                     effect = EFFECTS[i % len(EFFECTS)]
                     create_ken_burns(image_path, visual_path, duration, effect)
                     got_visual = True
-                    print(f"    [OK] Visual {seg_num}: FLUX AI image + {effect}",
+                    print(f"    [OK] Visual {seg_num}: AI image + {effect}",
                           file=sys.stderr)
                 except Exception as e:
                     print(f"    [WARN] Ken Burns failed: {e}", file=sys.stderr)
@@ -276,7 +379,7 @@ def fetch_visuals_for_segments(segments: list, output_dir: str,
                     except OSError:
                         pass
 
-            time.sleep(2)  # Respect HuggingFace rate limits
+            time.sleep(2)  # Respect provider rate limits
 
         # Method 2: Pexels stock video (fallback)
         if not got_visual and pexels_key and keywords:

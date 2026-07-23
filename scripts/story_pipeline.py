@@ -106,7 +106,7 @@ def run_pipeline() -> dict:
             print(f"  [3/4] Generating AI images ({len(scenes)} scenes)...", file=sys.stderr)
             scene_images = []
 
-            if hf_token and scenes:
+            if scenes:
                 for j, scene in enumerate(scenes):
                     # Handle both {"visual_prompt": "..."} and plain string formats
                     if isinstance(scene, dict):
@@ -131,7 +131,7 @@ def run_pipeline() -> dict:
                     time.sleep(2)  # HuggingFace rate limit
 
             # Fallback: if no scene images, try single image from narration
-            if not scene_images and hf_token:
+            if not scene_images:
                 fallback_prompt = f"dark cinematic scene, {narration.split('.')[0][:80]}, moody atmosphere, dramatic lighting"
                 fallback_path = os.path.join(VISUALS_DIR, f"short_{idx}_fallback.jpg")
                 print(f"    Fallback: generating from narration...", file=sys.stderr)

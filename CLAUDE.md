@@ -31,6 +31,8 @@ Cron watchers (host, */5) ──────────────────
 | Script | Purpose |
 |--------|---------|
 | `pipeline.py` | Master orchestrator — scrape, download, narrate, compile, output manifest |
+| `story_pipeline.py` | Current orchestrator ("Reddit Stories Edition") — Reddit/Groq stories → TTS → AI images → shorts |
+| `fetch_visuals.py` | AI image generation (Cloudflare → HF → Pollinations) + Ken Burns |
 | `scrape_viral.py` | Finds trending clips (YouTube, Reddit via yt-dlp) |
 | `download_clips.py` | Downloads raw video clips |
 | `generate_narration.py` | Groq API (Llama 3.3 70B) for script + Edge TTS for voice |
@@ -39,6 +41,23 @@ Cron watchers (host, */5) ──────────────────
 | `upload_instagram.py` | Instagram Reels upload (`--auth`, `--refresh`) |
 | `tiktok_watcher.sh` | Cron watcher — polls for `tiktok_manifest.json` |
 | `instagram_watcher.sh` | Cron watcher — polls for `instagram_manifest.json` |
+
+## AI Image Generation (fetch_visuals.py)
+
+Provider chain (first success wins), all outputs normalized to 1080x1920 via ffmpeg:
+
+1. **Cloudflare Workers AI** — primary, free 10,000 neurons/day.
+   `@cf/black-forest-labs/flux-2-klein-4b` at 832x1472 (~160 neurons/img), then
+   `@cf/black-forest-labs/flux-1-schnell` at 1024x1024 (~100 neurons/img).
+   Env: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` (token template "Workers AI").
+2. **HuggingFace router** — `stabilityai/stable-diffusion-3-medium-diffusers` on
+   `router.huggingface.co/hf-inference`. FLUX.1-schnell was removed from hf-inference
+   in Jul 2026 (HTTP 410). Free accounts get tiny monthly credits → 402 when depleted.
+3. **Pollinations** (`gen.pollinations.ai`) — pay-per-image "pollen" balance; 402 when empty.
+
+Env vars for the pipeline live in `/home/ubuntu/n8n-docker/docker-compose.yml`
+(the pipeline runs inside the n8n container), NOT in `/home/ubuntu/pipeline/.env`.
+After editing compose: `cd /home/ubuntu/n8n-docker && docker compose up -d`.
 
 ## TikTok Integration
 
