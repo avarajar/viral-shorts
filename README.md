@@ -1,19 +1,19 @@
 # Viral Pipeline
 
-Fully automated content engine that scrapes trending videos, generates AI narration, compiles short-form content, and publishes to **TikTok**, **Instagram Reels**, and **YouTube** — twice a day, zero human input.
+Fully automated content engine that turns Reddit-style stories into narrated shorts with AI-generated visuals and publishes them to **TikTok**, **Instagram Reels**, and **YouTube** — twice a day, zero human input.
 
 ```
-Scrape ➜ Download ➜ Narrate ➜ Compile ➜ Publish
+Story ➜ Narrate ➜ Generate Images ➜ Assemble ➜ Publish
 ```
 
 ## How It Works
 
 | Stage | What happens | Tools |
 |-------|-------------|-------|
-| **Scrape** | Finds trending clips from YouTube, Reddit, and other sources | `yt-dlp` |
-| **Download** | Pulls the raw video clips | `yt-dlp` |
-| **Narrate** | Generates a script and voice-over narration | Groq (Llama 3.3 70B) + Edge TTS |
-| **Compile** | Assembles clips with narration, subtitles, transitions, and music into a long-form video + vertical shorts | `ffmpeg` |
+| **Story** | Scrapes trending Reddit posts (or generates original stories when Reddit blocks) | Reddit JSON + Groq (Llama 3.3 70B) |
+| **Narrate** | Voice-over narration with word timestamps for karaoke subtitles | Edge TTS |
+| **Generate Images** | AI image per scene, vertical 1080x1920 | Cloudflare Workers AI (FLUX.2 klein / FLUX.1 schnell) → HuggingFace SD3 → Pollinations |
+| **Assemble** | Ken Burns motion + karaoke subs into vertical shorts | `ffmpeg` |
 | **Publish** | Uploads shorts to TikTok, Instagram Reels, and YouTube | TikTok API, Instagram Graph API, n8n |
 
 The pipeline runs inside **n8n** on an Oracle Cloud ARM server, triggered on a schedule. Upload watchers run as cron jobs on the host, polling for new manifests every 5 minutes.
@@ -26,10 +26,10 @@ The pipeline runs inside **n8n** on an Oracle Cloud ARM server, triggered on a s
 │                                                 │
 │  ┌───────────────────────────────────┐          │
 │  │  Docker: n8n                      │          │
-│  │  ┌─────────┐    ┌──────────────┐  │          │
-│  │  │ Schedule │───▶│  pipeline.py │  │          │
-│  │  │ 7am/4pm │    │  (5 stages)  │  │          │
-│  │  └─────────┘    └──────┬───────┘  │          │
+│  │  ┌─────────┐  ┌─────────────────┐ │          │
+│  │  │ Schedule│──▶│story_pipeline.py│ │          │
+│  │  │ 7am/4pm │  │ story→img→short │ │          │
+│  │  └─────────┘  └────────┬────────┘ │          │
 │  │                        │ manifest │          │
 │  └────────────────────────┼──────────┘          │
 │                           ▼                     │
@@ -77,6 +77,17 @@ INSTAGRAM_USER_ID=your_ig_user_id
 DISCORD_WEBHOOK_URL=your_webhook
 ```
 
+Image-generation credentials live in the n8n container's environment
+(`/home/ubuntu/n8n-docker/docker-compose.yml` on the server), since the
+pipeline runs inside n8n:
+
+```env
+CLOUDFLARE_ACCOUNT_ID=...   # Workers AI, primary provider (free 10k neurons/day)
+CLOUDFLARE_API_TOKEN=...    # token template "Workers AI"
+HF_TOKEN=...                # HuggingFace fallback (SD3 medium)
+POLLINATIONS_API_KEY=...    # last-resort fallback (paid "pollen" balance)
+```
+
 ### 3. Authenticate Platforms
 
 ```bash
@@ -97,10 +108,8 @@ python3 scripts/upload_instagram.py --auth
 ### 5. Run the Pipeline
 
 ```bash
-# Manual test run
-cd /home/ubuntu/pipeline/scripts
-source ../venv/bin/activate
-python3 pipeline.py
+# Manual test run (inside the n8n container, where the env vars live)
+docker exec n8n python3 /pipeline/scripts/story_pipeline.py
 
 # Or let n8n handle it on schedule
 ```
@@ -109,7 +118,12 @@ python3 pipeline.py
 
 ```
 scripts/
-├── pipeline.py              # Master orchestrator (5-stage pipeline)
+├── story_pipeline.py        # Orchestrator — story → narration → AI images → shorts
+├── generate_story.py        # Reddit scraping + Groq story adaptation
+├── narrate_story.py         # Edge TTS narration with word timestamps
+├── fetch_visuals.py         # AI images (Cloudflare → HF → Pollinations) + Ken Burns
+├── assemble_video.py        # FFmpeg assembly with karaoke subtitles
+├── pipeline.py              # Legacy orchestrator (clip-based pipeline)
 ├── scrape_viral.py          # Scrapes trending content sources
 ├── download_clips.py        # Downloads raw video clips
 ├── generate_narration.py    # AI script generation + TTS voice-over
