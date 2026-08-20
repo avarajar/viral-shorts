@@ -10,7 +10,7 @@ import subprocess
 import sys
 import urllib.request
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = "openai/gpt-oss-120b"
 VOICE = "en-US-AndrewMultilingualNeural"  # Natural male English voice
 AUDIO_DIR = "/pipeline/audio"
 
@@ -65,7 +65,7 @@ Rules:
         "model": GROQ_MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 2000,
+        "max_tokens": 4000,
         "response_format": {"type": "json_object"},
     }).encode()
 
