@@ -119,7 +119,7 @@ scp config/crontab.host viral-pipeline:/tmp/ && \
 
 - All Python scripts use only stdlib (`urllib`, `json`, `subprocess`) — no `requests` or heavy deps
 - FFmpeg and yt-dlp are the external workhorses
-- AI: Groq free tier with Llama 3.3 70B for script generation
+- AI: Groq free tier with `openai/gpt-oss-120b` for script generation (Llama 3.3 70B was decommissioned Aug 2026; free tier caps at 8000 TPM, so `max_tokens` must stay well under it)
 - TTS: Microsoft Edge TTS (free, no API key needed)
 - Docker paths start with `/pipeline/` — map to `/home/ubuntu/pipeline/` on host
 - Token files (`.json`) are gitignored — never commit secrets

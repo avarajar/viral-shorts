@@ -1,20 +1,30 @@
 #!/usr/bin/env python3
 """
 Scrape trending Reddit posts and adapt them into viral YouTube Shorts scripts.
-Uses Reddit JSON API (free, no key) + Groq for adaptation.
+Uses the public Reddit RSS feeds (free, no key) + Groq for adaptation.
 """
 
 import json
 import os
+import re
 import sys
 import urllib.request
 import urllib.parse
+import urllib.error
+import html
+from xml.etree import ElementTree
 import random
 import time
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = "openai/gpt-oss-120b"
 BROWSER_UA = "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+# Reddit throttles generic browser UAs harder on the RSS feeds; it asks bots for
+# a unique descriptive one.
+RSS_UA = "python:viral-shorts:v1.0 (by /u/avarajar)"
 MAX_RETRIES = 3
+RSS_DELAY = 5      # fallback wait between feeds when Reddit sends no quota header
+RSS_MAX_WAIT = 45  # cap on a single quota wait
+RSS_RETRIES = 3    # attempts per feed when Reddit answers 429
 RETRY_DELAY = 10  # seconds
 
 
@@ -24,7 +34,7 @@ def _call_groq(groq_api_key: str, prompt: str, temperature: float = 0.85) -> dic
         "model": GROQ_MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": temperature,
-        "max_tokens": 4000,
+        "max_tokens": 6000,
         "response_format": {"type": "json_object"},
     }).encode()
 
@@ -53,11 +63,12 @@ def _call_groq(groq_api_key: str, prompt: str, temperature: float = 0.85) -> dic
     print(f"  [ERR] Groq failed after {MAX_RETRIES} attempts", file=sys.stderr)
     return None
 
-# Subreddits to scrape (sorted by virality potential)
+# Subreddits to scrape (sorted by virality potential).
+# r/ProRevenge was dropped: its feed is empty even at t=month, and every feed
+# costs a ~35s quota wait.
 SUBREDDITS = [
     "AmItheAsshole",
     "tifu",
-    "ProRevenge",
     "MaliciousCompliance",
     "entitledparents",
     "relationship_advice",
@@ -66,40 +77,95 @@ SUBREDDITS = [
 ]
 
 
+def _reset_after(headers) -> float:
+    """Seconds until Reddit's anonymous RSS quota resets.
+
+    Anonymous clients get roughly one request per window, and both 200s and 429s
+    carry `x-ratelimit-reset` with the seconds left in the current window, so we
+    wait exactly that long instead of guessing a backoff.
+    """
+    try:
+        return min(RSS_MAX_WAIT, float(headers.get("x-ratelimit-reset")) + 2)
+    except (TypeError, ValueError):
+        return RSS_DELAY
+
+
+def _fetch_feed(url: str):
+    """GET an RSS feed, waiting out 429s. Returns (XML root, seconds to wait next)."""
+    for attempt in range(1, RSS_RETRIES + 1):
+        req = urllib.request.Request(url, headers={
+            "User-Agent": RSS_UA,
+            "Accept": "application/atom+xml",
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return ElementTree.fromstring(resp.read()), _reset_after(resp.headers)
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or attempt == RSS_RETRIES:
+                raise
+            wait = _reset_after(e.headers)
+            print(f"  [WARN] Reddit quota hit, waiting {wait:.0f}s...", file=sys.stderr)
+            time.sleep(wait)
+
+
+def _entry_to_post(entry, sub: str, rank: int) -> dict:
+    """Turn one Atom <entry> into a post dict. Returns None if it has no body."""
+    ns = "{http://www.w3.org/2005/Atom}"
+    title = (entry.findtext(ns + "title") or "").strip()
+    content = entry.findtext(ns + "content") or ""
+    link_el = entry.find(ns + "link")
+    url = link_el.get("href") if link_el is not None else ""
+
+    # Reddit wraps the selftext between SC_OFF/SC_ON; everything after SC_ON is
+    # the "submitted by ... [link] [comments]" footer.
+    body = re.search(r"<!-- SC_OFF -->(.*?)<!-- SC_ON -->", content, re.S)
+    body = body.group(1) if body else content
+    text = re.sub(r"<[^>]+>", " ", body)
+    text = html.unescape(text)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    if len(text) < 200:  # Only posts with substantial text
+        return None
+
+    return {
+        "subreddit": sub,
+        "title": title,
+        "text": text[:3000],  # Cap at 3000 chars
+        "rank": rank,  # 1 = top of the feed; RSS gives no score/comment counts
+        "url": url,
+    }
+
+
 def scrape_reddit(subreddits: list = None, time_filter: str = "week",
                    limit: int = 5) -> list:
-    """Scrape top posts from Reddit (no API key needed)."""
+    """Scrape top posts from Reddit via the public RSS feeds (no API key needed).
+
+    The .json endpoints started returning 403 for anonymous clients in Aug 2026
+    (from every IP, not just datacenters). The RSS feeds are still open and carry
+    the same top-of-period ranking plus the full selftext -- but no score or
+    comment counts, so posts are ranked by their position in the feed instead.
+    """
     if not subreddits:
         subreddits = random.sample(SUBREDDITS, min(4, len(SUBREDDITS)))
 
     posts = []
     for sub in subreddits:
-        url = f"https://www.reddit.com/r/{sub}/top.json?t={time_filter}&limit={limit}"
-        req = urllib.request.Request(url, headers={
-            "User-Agent": BROWSER_UA,
-            "Accept": "application/json",
-        })
+        url = f"https://www.reddit.com/r/{sub}/top.rss?t={time_filter}&limit={limit}"
+        wait = RSS_DELAY
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = json.loads(resp.read().decode())
-                for child in data.get("data", {}).get("children", []):
-                    post = child.get("data", {})
-                    text = post.get("selftext", "")
-                    if len(text) > 200:  # Only posts with substantial text
-                        posts.append({
-                            "subreddit": sub,
-                            "title": post.get("title", ""),
-                            "text": text[:3000],  # Cap at 3000 chars
-                            "score": post.get("score", 0),
-                            "num_comments": post.get("num_comments", 0),
-                            "url": f"https://reddit.com{post.get('permalink', '')}",
-                        })
-            time.sleep(1)  # Be nice to Reddit
+            root, wait = _fetch_feed(url)
+            entries = root.findall("{http://www.w3.org/2005/Atom}entry")
+            for rank, entry in enumerate(entries[:limit], start=1):
+                post = _entry_to_post(entry, sub, rank)
+                if post:
+                    posts.append(post)
         except Exception as e:
             print(f"  [WARN] Reddit r/{sub} failed: {e}", file=sys.stderr)
+        if sub != subreddits[-1]:
+            time.sleep(wait)  # Let the quota window reset before the next feed
 
-    # Sort by engagement (score + comments)
-    posts.sort(key=lambda p: p["score"] + p["num_comments"] * 2, reverse=True)
+    # Best posts first: rank 1 of every subreddit, then rank 2, and so on
+    posts.sort(key=lambda p: p["rank"])
     return posts
 
 
@@ -112,7 +178,7 @@ def adapt_stories(groq_api_key: str, reddit_posts: list, count: int = 3) -> dict
     posts_text = ""
     for i, post in enumerate(selected):
         posts_text += f"""
---- REDDIT POST {i+1} (r/{post['subreddit']}, {post['score']} upvotes) ---
+--- REDDIT POST {i+1} (r/{post['subreddit']}, #{post['rank']} top of the week) ---
 Title: {post['title']}
 Story: {post['text'][:1500]}
 ---
@@ -186,7 +252,7 @@ def generate_story(groq_api_key: str, niche: str = None, count: int = 3) -> dict
         return _generate_original(groq_api_key, count)
 
     for p in posts[:5]:
-        print(f"    r/{p['subreddit']}: {p['title'][:50]}... ({p['score']} pts)",
+        print(f"    r/{p['subreddit']}: {p['title'][:50]}... (#{p['rank']} top)",
               file=sys.stderr)
 
     # Step 2: Adapt top posts with Groq
