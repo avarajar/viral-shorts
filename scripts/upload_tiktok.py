@@ -274,8 +274,8 @@ def upload_short(video_path, title, tags=None):
     creator = query_creator(access_token)
     available = creator.get("privacy_level_options", ["SELF_ONLY"])
 
-    # Default to SELF_ONLY while app is under review; change manually once approved
-    privacy = "SELF_ONLY"
+    # Post publicly when the account allows it; SELF_ONLY is the safe fallback
+    privacy = "PUBLIC_TO_EVERYONE" if "PUBLIC_TO_EVERYONE" in available else "SELF_ONLY"
 
     # Build description with hashtags
     tag_str = ""
