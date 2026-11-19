@@ -86,6 +86,30 @@ host cron every minute ─▶ campaign_bot.sh ─▶ campaign_bot.py poll
 - YouTube blocks yt-dlp from the server IP; Twitch, Google Drive and direct mp4 work.
 - Whisper free tier: ~2h of audio per hour, so keep `--window` to ~1h for long VODs.
 
+### Pilot status (update as it progresses)
+
+- **2026-11-19:** FundingPips pilot deployed, cron active, nothing posted yet.
+  TikTok `@trader.mindset.clips` is warming up (watch trading videos ~10 min/day)
+  until **~2026-11-22**. Rename its display name "Clips" after 2026-11-25.
+- Three clips are already waiting in Telegram with buttons (the buttons don't expire):
+  "Debt collectors were at his door" (post first), "Her first trade was just £20",
+  "He was $22K in debt. Here is what changed".
+- **After the warm-up:** approve **one clip per day** in Telegram, then submit the TikTok
+  link on Content Rewards within 30 min. On the first Approve, check `campaigns.log`
+  and `campaign_bot_state.json` on the server to confirm it posted publicly.
+- **Open items:**
+  - YouTube upload automation for the trading channel (phase 2; needs Google OAuth
+    for that brand channel). The channel bio must link `https://app.fundingpips.com/register?ref=FPMOVEMENT`.
+  - Confirm the caption code with the campaign: the page says `AF527550`, the rules doc
+    says `FPMOVEMENT`; the config uses `AF527550`.
+  - After a week: review approvals, rejections and views on Content Rewards, and tune
+    the hooks or prompt.
+- Campaign: https://contentrewards.com/c/campaigns/c0c37381-e244-4643-98bd-edbff4bc1465 ·
+  Rules: https://docs.google.com/document/d/1Ui7LF0DxGT-9LwuSoLjLIzp-8upJhvjI8gGUz2V4Lkg
+- Other campaigns ruled out: SypherPK/Reach, Daniel Curto, Eneba, Lyrical Lemonade,
+  META-KLAGE and Daise ban AI clipping; It's Personal needs 3k followers and a 60-day-old account.
+  ForgeGUI "Showcase" (Roblox, TikTok/IG only) allows AI and is the fallback.
+
 ## AI Image Generation (fetch_visuals.py)
 
 Provider chain (first success wins), all outputs normalized to 1080x1920 via ffmpeg:
