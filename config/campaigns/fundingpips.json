@@ -1,0 +1,53 @@
+{
+  "name": "FundingPips Clipping",
+  "platform": "Content Rewards",
+  "campaign_url": "https://contentrewards.com/c/campaigns/c0c37381-e244-4643-98bd-edbff4bc1465",
+  "rules_url": "https://docs.google.com/document/d/1Ui7LF0DxGT-9LwuSoLjLIzp-8upJhvjI8gGUz2V4Lkg",
+  "cpm_usd": 6.0,
+  "min_views_for_payout": 2000,
+  "brief": "FundingPips is a prop trading firm (traders get simulated funded accounts after passing an evaluation). Pick the strongest, high-impact verbal moments or emotional highlights: trading psychology, discipline, handling risk, passing evaluation phases, scaling accounts, real trader stories and payouts. Hooks must be hyper-aggressive (stop the scroll in 1-3 seconds) but honest. FORBIDDEN: presenting funding as free money or get-rich-quick, implying guaranteed profits/payouts/passing, or cheating evaluation rules. Keep it professional, focused on skill, execution and risk management.",
+  "sources": [
+    {
+      "url": "https://drive.google.com/file/d/15W6nny-stjEuIrRdGBE1DWYJkTE6oo7O/view",
+      "title": "FundingPips Trader Who Earned $59,000 in Rewards and Bought a House"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1xRMnSdq2KOyODO90cohPZHMMRV15LCtm/view",
+      "title": "FundingPips 4th Anniversary Livestream with CEO"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1bdRckNJ1HquSiGBqZgKjM_SKV2UHFocL/view",
+      "title": "A Zero Payout Denial Prop Firm For Real"
+    }
+  ],
+  "source_language": "en",
+  "caption_language": "English",
+  "clip_seconds": [
+    22,
+    45
+  ],
+  "clips_per_run": 3,
+  "caption_words_per_line": 3,
+  "dynamic_cuts": true,
+  "cut_seconds": 2.2,
+  "on_screen_persistent": "DISCOUNT CODE: FPMOVEMENT",
+  "mentions": [
+    "@fundingpips"
+  ],
+  "hashtags": [
+    "#fundingpips",
+    "#trader",
+    "#getfunded"
+  ],
+  "caption_suffix": "",
+  "caption_disclosure": "Get 20% on FundingPips funded accounts using Code AF527550",
+  "transcript_fixes": {
+    "funding tips": "FundingPips",
+    "funding pips": "FundingPips",
+    "fundingpips": "FundingPips",
+    "emis": "EMIs",
+    "emi": "EMI",
+    "prop firms": "prop firms",
+    "prop firm": "prop firm"
+  }
+}
