@@ -49,5 +49,9 @@
     "emi": "EMI",
     "prop firms": "prop firms",
     "prop firm": "prop firm"
+  },
+  "tiktok": {
+    "tokens_file": "tiktok_tokens_fundingpips.json",
+    "is_aigc": false
   }
 }

@@ -61,8 +61,26 @@ python3 clip_campaign.py CAMPAIGN.json --source URL --window 0:30:00-1:30:00
 python3 clip_campaign.py CAMPAIGN.json --rerender .../manifest.json   # after editing hooks
 ```
 
-- **Posting is manual on purpose.** Content Rewards requires the post link to be
-  submitted within 30 min of posting and has no submission API.
+### Daily automation (Telegram approval)
+
+```
+host cron 13:00 UTC (8 AM COT) ─▶ campaign_daily.sh fundingpips 1
+   └─ docker exec: clip_campaign.py --daily  (next unused moment, rotates sources[];
+                                              state in output/campaigns/<c>/state.json)
+   └─ campaign_bot.py notify ─▶ Telegram video + [✅ Aprobar y publicar] [❌ Descartar]
+host cron every minute ─▶ campaign_bot.sh ─▶ campaign_bot.py poll
+   └─ on Approve: upload_tiktok.py --post (campaign account) ─▶ Telegram: link + deadline
+```
+
+- Bot env in `/home/ubuntu/pipeline/.env`: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+  (`campaign_bot.py chat-id` prints it). Bot state: `/home/ubuntu/pipeline/campaign_bot_state.json`.
+- Campaign TikTok account: `@trader.mindset.clips`, tokens in
+  `scripts/tiktok_tokens_fundingpips.json` (config `tiktok.tokens_file`; `TIKTOK_TOKENS_FILE`
+  selects the account in `upload_tiktok.py`). Posted with `is_aigc: false` (real footage).
+- The bot only takes button presses from `TELEGRAM_CHAT_ID`.
+- Logs: `/home/ubuntu/pipeline/campaigns.log`.
+- **The last step stays manual.** Content Rewards requires the post link to be submitted
+  within 30 min of posting and has no submission API. The 30 min starts when you tap Approve.
 - **Read each campaign's rules first.** Most ban AI/automated clipping (SypherPK/Reach,
   Daniel Curto, Eneba…); FundingPips does not. A Reach strike bans you from all their campaigns.
 - YouTube blocks yt-dlp from the server IP; Twitch, Google Drive and direct mp4 work.

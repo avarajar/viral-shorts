@@ -1,5 +1,7 @@
 # Tokens and secrets
 tiktok_tokens.json
+*_tokens*.json
+campaign_bot_state.json
 *.env
 .env
 

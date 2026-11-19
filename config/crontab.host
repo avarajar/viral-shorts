@@ -8,6 +8,12 @@
 */5 * * * * /home/ubuntu/pipeline/scripts/instagram_watcher.sh >> /home/ubuntu/pipeline/instagram_upload.log 2>&1
 */5 * * * * /home/ubuntu/pipeline/scripts/tiktok_watcher.sh >> /home/ubuntu/pipeline/tiktok_upload.log 2>&1
 
+# ── Clipping campaigns (Content Rewards) ─────────────────────────────────────
+# 13:00 UTC = 8:00 AM Colombia: render the next clip and send it to Telegram.
+0 13 * * * /home/ubuntu/pipeline/scripts/campaign_daily.sh fundingpips 1 >> /home/ubuntu/pipeline/campaigns.log 2>&1
+# Telegram approval buttons: Approve posts to TikTok (campaign_bot.py).
+* * * * * /home/ubuntu/pipeline/scripts/campaign_bot.sh >> /home/ubuntu/pipeline/campaigns.log 2>&1
+
 # ── Instagram long-lived token refresh ───────────────────────────────────────
 # REQUIRED. IG long-lived tokens expire after 60 days and do not renew on their
 # own. This refreshes well inside that window (every 50 days). Without it the

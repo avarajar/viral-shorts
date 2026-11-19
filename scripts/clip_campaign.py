@@ -73,6 +73,22 @@ def download_source(url: str, work: str, window: str | None) -> str:
     if os.path.exists(path):
         log(f"  [SKIP] source already downloaded")
         return path
+    drive = re.search(r"drive\.google\.com/file/d/([A-Za-z0-9_-]+)", url)
+    if drive:
+        # yt-dlp's Drive extractor fails on big files (virus-scan interstitial);
+        # the direct usercontent endpoint with confirm=t streams them fine.
+        direct = f"https://drive.usercontent.google.com/download?id={drive.group(1)}&export=download&confirm=t"
+        log(f"  [DL] Google Drive file {drive.group(1)}")
+        tmp = path + ".part"
+        run(["curl", "-sSfL", "--retry", "3", "-o", tmp, direct], timeout=3600)
+        if window:
+            start, end = (parse_hms(x) for x in window.split("-"))
+            run(["ffmpeg", "-y", "-v", "error", "-ss", str(start), "-to", str(end), "-i", tmp,
+                 "-c", "copy", path], timeout=1800)
+            os.remove(tmp)
+        else:
+            os.replace(tmp, path)
+        return path
     cmd = [
         "yt-dlp", "--no-warnings", "--no-playlist",
         "-f", f"bv*[height<={MAX_HEIGHT}]+ba/b[height<={MAX_HEIGHT}]/b",
@@ -262,7 +278,8 @@ TRANSCRIPT:
     return candidates
 
 
-def snap_and_select(candidates: list, transcript: dict, campaign: dict, count: int) -> list:
+def snap_and_select(candidates: list, transcript: dict, campaign: dict, count: int,
+                    taken: list | None = None) -> list:
     """Snap to sentence boundaries, enforce length, drop overlaps, keep top `count`."""
     segs = transcript["segments"]
     min_len, max_len = campaign.get("clip_seconds", [20, 60])
@@ -276,7 +293,7 @@ def snap_and_select(candidates: list, transcript: dict, campaign: dict, count: i
             end = start + max_len
         if end - start < min_len:
             continue
-        if any(start < o["end"] and end > o["start"] for o in chosen):
+        if any(start < o["end"] and end > o["start"] for o in chosen + (taken or [])):
             continue
         chosen.append({**c, "start": round(start, 2), "end": round(end, 2)})
         if len(chosen) >= count:
@@ -488,59 +505,54 @@ def rerender(manifest_path: str, campaign: dict):
     print(json.dumps(manifest, indent=2, ensure_ascii=False))
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("campaign", help="campaign config JSON")
-    ap.add_argument("--source", help="override source URL (default: first in config)")
-    ap.add_argument("--window", help="only this part of the source, e.g. 0:30:00-1:30:00")
-    ap.add_argument("--count", type=int, help="clips to render (default from config)")
-    ap.add_argument("--out", default=OUTPUT_ROOT)
-    ap.add_argument("--rerender", metavar="MANIFEST",
-                    help="re-render the clips of an existing manifest (after editing hooks "
-                         "or transcript_fixes); skips download, transcription and picking")
-    args = ap.parse_args()
+def _sources(campaign: dict) -> list:
+    """Normalize sources[] (URL strings or {"url", "window"} dicts) to dicts."""
+    out = []
+    for src in campaign.get("sources") or []:
+        out.append(src if isinstance(src, dict) else {"url": src})
+    return out
 
-    api_key = os.environ.get("GROQ_API_KEY", "")
-    if not api_key:
-        log("GROQ_API_KEY not set")
-        sys.exit(1)
-    with open(args.campaign) as f:
-        campaign = json.load(f)
-    if args.rerender:
-        rerender(args.rerender, campaign)
-        return
 
-    # sources[] entries are either a URL string or {"url", "window"}; the
-    # campaign's allowed-footage window is the default when --window isn't given.
-    first = (campaign.get("sources") or [None])[0]
-    if isinstance(first, dict):
-        source_url = args.source or first.get("url")
-        if not args.source and not args.window:
-            args.window = first.get("window")
-    else:
-        source_url = args.source or first
-    if not source_url:
-        log("No source URL: pass --source or set sources[] in the campaign config")
-        sys.exit(1)
-    count = args.count or campaign.get("clips_per_run", 3)
+def _slug(campaign: dict) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", campaign.get("name", "campaign").lower()).strip("-")
 
-    slug = re.sub(r"[^a-z0-9]+", "-", campaign.get("name", "campaign").lower()).strip("-")
-    src_id = re.sub(r"[^A-Za-z0-9]+", "_", source_url)[-40:] + (("_" + args.window.replace(":", "")) if args.window else "")
-    work = os.path.join(args.out, slug, "work", src_id)
-    out_dir = os.path.join(args.out, slug, datetime.now().strftime("%Y%m%d_%H%M%S"))
+
+def run_source(api_key: str, campaign: dict, source_url: str, window: str | None, count: int,
+               out_root: str, exclude: list | None = None) -> dict | None:
+    """Download/transcribe/pick/render clips from one source. Returns the manifest or None.
+
+    Highlight candidates are cached per source (candidates.json), so later runs
+    (e.g. --daily) only re-select and render, without spending LLM quota again.
+    `exclude` holds [start, end] ranges already used, which are never re-clipped.
+    """
+    src_id = re.sub(r"[^A-Za-z0-9]+", "_", source_url)[-40:] + (("_" + window.replace(":", "")) if window else "")
+    work = os.path.join(out_root, _slug(campaign), "work", src_id)
     os.makedirs(work, exist_ok=True)
-    os.makedirs(out_dir, exist_ok=True)
 
-    log(f"[1/4] Download")
-    source = download_source(source_url, work, args.window)
-    log(f"[2/4] Transcribe")
+    log(f"[1/4] Download {source_url}")
+    source = download_source(source_url, work, window)
+    log("[2/4] Transcribe")
     transcript = transcribe(api_key, source, work, campaign.get("source_language"))
-    log(f"[3/4] Pick highlights ({len(transcript['segments'])} segments)")
-    clips = snap_and_select(pick_highlights(api_key, transcript, campaign), transcript, campaign, count)
-    if not clips:
-        log("No usable highlights found")
-        sys.exit(2)
 
+    cand_path = os.path.join(work, "candidates.json")
+    if os.path.exists(cand_path):
+        with open(cand_path) as f:
+            candidates = json.load(f)
+        log(f"[3/4] {len(candidates)} cached highlight candidates")
+    else:
+        log(f"[3/4] Pick highlights ({len(transcript['segments'])} segments)")
+        candidates = pick_highlights(api_key, transcript, campaign)
+        with open(cand_path, "w") as f:
+            json.dump(candidates, f, indent=2, ensure_ascii=False)
+
+    used = [{"start": a, "end": b} for a, b in (exclude or [])]
+    clips = snap_and_select(candidates, transcript, campaign, count, taken=used)
+    if not clips:
+        log("No unused highlights left in this source")
+        return None
+
+    out_dir = os.path.join(out_root, _slug(campaign), datetime.now().strftime("%Y%m%d_%H%M%S"))
+    os.makedirs(out_dir, exist_ok=True)
     log(f"[4/4] Render {len(clips)} clips")
     results = []
     for i, clip in enumerate(clips, 1):
@@ -556,12 +568,85 @@ def main():
                         "score": clip["score"], "hook": clip.get("hook", ""), "why": clip.get("why", ""),
                         "caption": compose_caption(clip, campaign)})
         log(f"  [OK] {mp4} ({clip['end'] - clip['start']:.0f}s, score {clip['score']:.0f}) {clip.get('hook', '')}")
+    if not results:
+        return None
 
-    manifest = {"campaign": campaign.get("name"), "source": source_url, "window": args.window,
-                "work_dir": work,
+    manifest = {"campaign": campaign.get("name"), "source": source_url, "window": window,
+                "work_dir": work, "out_dir": out_dir,
                 "created": datetime.now().isoformat(timespec="seconds"), "clips": results}
     with open(os.path.join(out_dir, "manifest.json"), "w") as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
+    return manifest
+
+
+def run_daily(api_key: str, campaign: dict, count: int, out_root: str) -> dict | None:
+    """Next unused clip(s), rotating through sources[]; remembers what was used.
+
+    State lives in <out_root>/<campaign>/state.json:
+      {"source_index": i, "used": {source_url: [[start, end], ...]}}
+    """
+    sources = _sources(campaign)
+    if not sources:
+        sys.exit("campaign has no sources[]")
+    state_path = os.path.join(out_root, _slug(campaign), "state.json")
+    state = {"source_index": 0, "used": {}}
+    if os.path.exists(state_path):
+        with open(state_path) as f:
+            state = json.load(f)
+
+    for step in range(len(sources)):
+        idx = (state.get("source_index", 0) + step) % len(sources)
+        src = sources[idx]
+        used = state["used"].get(src["url"], [])
+        manifest = run_source(api_key, campaign, src["url"], src.get("window"), count, out_root, used)
+        if manifest:
+            state["used"][src["url"]] = used + [[c["start"], c["end"]] for c in manifest["clips"]]
+            state["source_index"] = (idx + 1) % len(sources)   # vary the source day to day
+            os.makedirs(os.path.dirname(state_path), exist_ok=True)
+            with open(state_path, "w") as f:
+                json.dump(state, f, indent=2)
+            return manifest
+    log("Every source is used up: add more sources[] to the campaign config")
+    return None
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("campaign", help="campaign config JSON")
+    ap.add_argument("--source", help="override source URL (default: first in config)")
+    ap.add_argument("--window", help="only this part of the source, e.g. 0:30:00-1:30:00")
+    ap.add_argument("--count", type=int, help="clips to render (default from config)")
+    ap.add_argument("--out", default=OUTPUT_ROOT)
+    ap.add_argument("--daily", action="store_true",
+                    help="render the next unused clip(s), rotating sources and skipping "
+                         "moments already used (for the scheduled run)")
+    ap.add_argument("--rerender", metavar="MANIFEST",
+                    help="re-render the clips of an existing manifest (after editing hooks "
+                         "or transcript_fixes); skips download, transcription and picking")
+    args = ap.parse_args()
+
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        log("GROQ_API_KEY not set")
+        sys.exit(1)
+    with open(args.campaign) as f:
+        campaign = json.load(f)
+    if args.rerender:
+        rerender(args.rerender, campaign)
+        return
+
+    count = args.count or campaign.get("clips_per_run", 3)
+    if args.daily:
+        manifest = run_daily(api_key, campaign, count, args.out)
+    else:
+        first = (_sources(campaign) or [{}])[0]
+        source_url = args.source or first.get("url")
+        window = args.window or (None if args.source else first.get("window"))
+        if not source_url:
+            sys.exit("No source URL: pass --source or set sources[] in the campaign config")
+        manifest = run_source(api_key, campaign, source_url, window, count, args.out)
+    if not manifest:
+        sys.exit(2)
     print(json.dumps(manifest, indent=2, ensure_ascii=False))
 
 
