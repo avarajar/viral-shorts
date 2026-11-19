@@ -1,0 +1,24 @@
+{
+  "name": "SypherPK Clipping",
+  "platform": "Content Rewards (Reach)",
+  "campaign_url": "https://contentrewards.com/c/campaigns/f2c529a0-6777-4e8a-b50b-4c8bd4e4d90f",
+  "rules_url": "https://reachclipping.com/SypherPK",
+  "cpm_usd": 2.0,
+  "min_views_for_payout": 10000,
+  "brief": "Fortnite / UEFN (Fortnite Creative) stream from November 15 where SypherPK (Sypher), Replays and Maddynf play TOGETHER. Clips must feature all three playing together as the primary focus: banter between them, hype reactions, funny moments, big plays. Never portray Sypher, Replays, Maddynf, Fortnite, Epic Games or UEFN negatively; no hate-farming or negative false narratives.",
+  "sources": [
+    {"url": "https://www.twitch.tv/videos/2929935152", "creator": "Sypher", "window": "0:45:50-2:43:50"},
+    {"url": "https://www.twitch.tv/videos/2929917089", "creator": "Replays", "window": "1:06:07-3:03:10"},
+    {"url": "https://www.twitch.tv/videos/2929952825", "creator": "Maddynf", "window": "0:25:00-2:22:00"}
+  ],
+  "source_language": "en",
+  "caption_language": "English",
+  "clip_seconds": [20, 55],
+  "clips_per_run": 4,
+  "caption_words_per_line": 3,
+  "mentions": [],
+  "hashtags": ["#fortnitecreative", "#uefn", "#fortnite", "#sypherpk"],
+  "caption_suffix": "Sypher, Replays & Maddynf",
+  "caption_disclosure": "",
+  "on_screen_disclosure": ""
+}

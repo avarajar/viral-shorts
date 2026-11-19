@@ -42,6 +42,32 @@ Cron watchers (host, */5) ──────────────────
 | `tiktok_watcher.sh` | Cron watcher — polls for `tiktok_manifest.json` |
 | `instagram_watcher.sh` | Cron watcher — polls for `instagram_manifest.json` |
 
+## Clipping Campaigns (clip_campaign.py)
+
+Cuts paid clips for clipping marketplaces (Content Rewards). One config per campaign
+in `config/campaigns/*.json` (sources, brief, hashtags, caption text, on-screen text,
+`dynamic_cuts`, `transcript_fixes`).
+
+```
+yt-dlp source -> Groq Whisper (word timestamps) -> Groq LLM picks highlights
+  -> ffmpeg 9:16 (blur-fit or fill, punch-in re-framing every cut) + ASS captions
+  -> /pipeline/output/campaigns/<campaign>/<timestamp>/{clip_N.mp4, manifest.json}
+```
+
+```bash
+# inside the n8n container
+python3 clip_campaign.py /pipeline/config/campaigns/fundingpips.json --count 3
+python3 clip_campaign.py CAMPAIGN.json --source URL --window 0:30:00-1:30:00
+python3 clip_campaign.py CAMPAIGN.json --rerender .../manifest.json   # after editing hooks
+```
+
+- **Posting is manual on purpose.** Content Rewards requires the post link to be
+  submitted within 30 min of posting and has no submission API.
+- **Read each campaign's rules first.** Most ban AI/automated clipping (SypherPK/Reach,
+  Daniel Curto, Eneba…); FundingPips does not. A Reach strike bans you from all their campaigns.
+- YouTube blocks yt-dlp from the server IP; Twitch, Google Drive and direct mp4 work.
+- Whisper free tier: ~2h of audio per hour, so keep `--window` to ~1h for long VODs.
+
 ## AI Image Generation (fetch_visuals.py)
 
 Provider chain (first success wins), all outputs normalized to 1080x1920 via ffmpeg:
